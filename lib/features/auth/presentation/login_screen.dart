@@ -131,8 +131,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: auth.isLoading ? null : _submit,
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text('Belum punya akun?'),
                       TextButton(

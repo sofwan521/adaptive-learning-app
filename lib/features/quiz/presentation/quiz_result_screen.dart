@@ -231,27 +231,33 @@ class _FailedBody extends StatelessWidget {
                 else
                   for (var i = 0; i < path.length; i++)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          CircleAvatar(
-                            radius: 13,
-                            child: Text(
-                              '${i + 1}',
-                              style: textTheme.labelMedium,
-                            ),
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 13,
+                                child: Text(
+                                  '${i + 1}',
+                                  style: textTheme.labelMedium,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  state.names[path[i]] ?? path[i],
+                                  style: textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              state.names[path[i]] ?? path[i],
-                              style: textTheme.bodyMedium,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 8),
                           AppButton(
                             key: Key('quiz-retry-${path[i]}'),
-                            label: 'Ulangi ${state.names[path[i]] ?? path[i]}',
+                            label:
+                                'Ulangi ${state.names[path[i]] ?? path[i]}',
                             variant: AppButtonVariant.secondary,
                             onPressed: () => context.push(
                               AppRoutes.studentMaterial(

@@ -163,7 +163,7 @@ class _BadgesGrid extends ConsumerWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
-          mainAxisExtent: 132,
+          mainAxisExtent: 152,
         ),
         itemCount: badges.length,
         itemBuilder: (context, index) {
@@ -273,22 +273,30 @@ class _ReminderCard extends ConsumerWidget {
     return AppCard(
       child: Column(
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.notifications_outlined,
-                color: Theme.of(context).colorScheme.primary,
+          InkWell(
+            key: const Key('reminder-row'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _toggle(context, ref, !settings.enabled),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.notifications_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Pengingat harian'),
+                  ),
+                  Switch(
+                    key: const Key('reminder-toggle'),
+                    value: settings.enabled,
+                    onChanged: (value) => _toggle(context, ref, value),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('Pengingat harian'),
-              ),
-              Switch(
-                key: const Key('reminder-toggle'),
-                value: settings.enabled,
-                onChanged: (value) => _toggle(context, ref, value),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 8),
           Row(
