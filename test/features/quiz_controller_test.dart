@@ -134,6 +134,8 @@ class RecordingGamificationRepository implements GamificationRepository {
   );
   int addXpCalls = 0;
   int streakCalls = 0;
+  final Set<String> badgeCodes = {};
+  final List<String> awardedOrder = [];
 
   @override
   Future<GamificationState> load() async => state;
@@ -155,6 +157,16 @@ class RecordingGamificationRepository implements GamificationRepository {
   Future<GamificationState> updateStreak() async {
     streakCalls++;
     return state;
+  }
+
+  @override
+  Future<Set<String>> loadBadgeCodes() async => Set.of(badgeCodes);
+
+  @override
+  Future<bool> awardBadge(String code) async {
+    if (!badgeCodes.add(code)) return false;
+    awardedOrder.add(code);
+    return true;
   }
 }
 
@@ -364,11 +376,69 @@ void main() {
       // K03 terbuka karena K01 dan K02 kini mastered.
       expect(state.newlyUnlockedIds, contains('K03'));
       // XP diberikan dan sesi ditutup; potret dibersihkan.
+      // 8 benar (80) + lulus (50) + konsep baru (100) = 230.
       expect(gamification.addXpCalls, 1);
-      expect(state.xpEarned, quizMasteredXp);
+      expect(state.xpEarned, 230);
+      expect(state.xpTotal, 120 + 230);
+      expect(state.leveledUp, isFalse);
+      // Lencana langkah pertama dan konsep pertama diperoleh.
+      expect(state.newBadges, contains('langkah-pertama'));
+      expect(state.newBadges, contains('konsep-pertama'));
+      expect(
+        gamification.badgeCodes,
+        containsAll(['langkah-pertama', 'konsep-pertama']),
+      );
       expect(progress.sessionsFinished, 1);
       expect(resume.snapshot, isNull);
       expect(progress.savedResponses, hasLength(8));
+    });
+
+    test('bonus besar menaikkan level', () async {
+      final progress = RecordingProgressRepository()
+        ..states['K01'] = masteredState('K01');
+      final gamification = RecordingGamificationRepository()
+        ..state = const GamificationState(
+          studentId: 'siswa-1',
+          xp: 390,
+          level: 2,
+          streak: 4,
+        );
+      final container = _container(
+        progress: progress,
+        gamification: gamification,
+      );
+      final controller = container.read(quizControllerProvider.notifier);
+
+      await controller.start('K02');
+      for (var n = 0; n < 8; n++) {
+        await _answerCorrect(controller);
+      }
+      final state = container.read(quizControllerProvider);
+
+      expect(state.decision, SessionDecision.mastered);
+      expect(state.xpEarned, 230);
+      expect(state.xpTotal, 620);
+      expect(state.leveledUp, isTrue);
+    });
+
+    test('lulus remedial memberi lencana pahlawan remedial', () async {
+      final progress = RecordingProgressRepository()
+        ..states['K01'] = masteredState('K01');
+      final gamification = RecordingGamificationRepository();
+      final container = _container(
+        progress: progress,
+        gamification: gamification,
+      );
+      final controller = container.read(quizControllerProvider.notifier);
+
+      await controller.start('K02', originConceptId: 'K03');
+      for (var n = 0; n < 8; n++) {
+        await _answerCorrect(controller);
+      }
+      final state = container.read(quizControllerProvider);
+
+      expect(state.decision, SessionDecision.mastered);
+      expect(state.newBadges, contains('pahlawan-remedial'));
     });
   });
 
@@ -399,6 +469,33 @@ void main() {
       expect(plan.rootIds, contains('K01'));
       expect(state.rootCauseName, 'Bilangan Bulat');
       expect(progress.sessionsFinished, 1);
+      // Lencana langkah pertama tetap diperoleh walau gagal.
+      expect(state.newBadges, contains('langkah-pertama'));
+    });
+
+    test('gagal dengan jawaban benar tetap memberi XP jawaban', () async {
+      final progress = RecordingProgressRepository();
+      final gamification = RecordingGamificationRepository();
+      final container = _container(
+        progress: progress,
+        gamification: gamification,
+      );
+      final controller = container.read(quizControllerProvider.notifier);
+
+      await controller.start('K02');
+      await _answerCorrect(controller);
+      await _answerCorrect(controller);
+      await _answerWrong(controller);
+      await _answerWrong(controller);
+      await _answerWrong(controller);
+      final state = container.read(quizControllerProvider);
+
+      expect(state.phase, QuizPhase.done);
+      expect(state.decision, SessionDecision.failed);
+      // 2 benar (20), tanpa bonus lulus/penguasaan.
+      expect(gamification.addXpCalls, 1);
+      expect(state.xpEarned, 20);
+      expect(state.leveledUp, isFalse);
     });
   });
 

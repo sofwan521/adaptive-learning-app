@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../data/datasources/reminder_store.dart';
 import '../../../domain/models/concept.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../gamification/application/notification_scheduler.dart';
 import '../application/student_providers.dart';
 
 /// Beranda siswa: sapaan, XP/streak, kartu lanjutan, dan target harian.
@@ -61,6 +63,14 @@ class StudentHomeScreen extends ConsumerWidget {
                 onRetry: () => refreshStudySummary(ref),
                 friendlyError: _friendlyError,
               ),
+              const SizedBox(height: 24),
+              Text('Lencana', style: textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _BadgesPreview(
+                onRetry: () => refreshStudySummary(ref),
+                friendlyError: _friendlyError,
+              ),
+              const _RecommendationTrigger(),
             ],
           ),
         ),
@@ -78,10 +88,12 @@ class _StatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gamification = ref.watch(gamificationProvider);
     return gamification.when(
-      data: (state) => Row(
+      data: (state) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
           XpBadge(xp: state.xp),
-          const SizedBox(width: 8),
+          LevelBadge(level: state.level),
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -202,6 +214,115 @@ class _ContinueDataCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BadgesPreview extends ConsumerWidget {
+  final VoidCallback onRetry;
+  final String Function(Object error) friendlyError;
+
+  const _BadgesPreview({required this.onRetry, required this.friendlyError});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badgesAsync = ref.watch(studentBadgesProvider);
+    return badgesAsync.when(
+      data: (badges) {
+        final earned = [for (final b in badges) if (b.earned) b.badge];
+        if (earned.isEmpty) {
+          return AppCard(
+            child: Text(
+              'Belum ada lencana. Selesaikan kuis untuk meraih '
+              'lencana pertamamu!',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
+        return AppCard(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final badge in earned)
+                Chip(
+                  avatar: Icon(
+                    badgeIconFor(badge.code),
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  label: Text(badge.name),
+                ),
+            ],
+          ),
+        );
+      },
+      loading: () => const AppCard(
+        child: LoadingView(message: 'Memuat lencana…'),
+      ),
+      error: (error, _) => AppCard(
+        child: ErrorView(
+          message: friendlyError(error),
+          onRetry: onRetry,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pemicu notifikasi rekomendasi (tak terlihat).
+///
+/// Bila ada konsep lanjutan (Terbuka), tampilkan anjuran sekali sehari
+/// per konsep lewat [NotificationScheduler].
+class _RecommendationTrigger extends ConsumerStatefulWidget {
+  const _RecommendationTrigger();
+
+  @override
+  ConsumerState<_RecommendationTrigger> createState() =>
+      _RecommendationTriggerState();
+}
+
+class _RecommendationTriggerState
+    extends ConsumerState<_RecommendationTrigger> {
+  String? _sentKey;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(
+      continueConceptProvider,
+      (previous, next) {
+        next.whenData((concept) {
+          if (concept == null || !mounted) return;
+          final now = DateTime.now();
+          final key = recommendationKey(
+            today: now,
+            conceptId: concept.id,
+          );
+          if (_sentKey == key) return;
+          _sentKey = key;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            try {
+              final store = ref.read(reminderStoreProvider);
+              final last = await store.getLastRecommendationKey();
+              if (!shouldShowRecommendation(lastKey: last, key: key)) {
+                return;
+              }
+              await ref
+                  .read(notificationSchedulerProvider)
+                  .showRecommendation(conceptName: concept.name);
+              await store.setLastRecommendationKey(key);
+            } catch (_) {
+              // Rekomendasi best-effort.
+            }
+          });
+        });
+      },
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _DailyTargetCard extends ConsumerWidget {

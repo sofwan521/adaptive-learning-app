@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/repositories/concept_repository_impl.dart';
 import '../../../data/repositories/gamification_repository_impl.dart';
 import '../../../data/repositories/progress_repository_impl.dart';
+import '../../../domain/gamification/badges.dart';
 import '../../../domain/graph/knowledge_graph.dart';
 import '../../../domain/models/concept.dart';
 import '../../../domain/models/concept_status.dart';
@@ -68,6 +69,17 @@ final gamificationProvider = FutureProvider<GamificationState>((ref) {
   return ref.watch(gamificationRepositoryProvider).load();
 });
 
+/// Lencana siswa: katalog beserta status perolehan.
+final studentBadgesProvider =
+    FutureProvider<List<({AppBadge badge, bool earned})>>((ref) async {
+  final earned =
+      await ref.watch(gamificationRepositoryProvider).loadBadgeCodes();
+  return [
+    for (final badge in kAppBadges)
+      (badge: badge, earned: earned.contains(badge.code)),
+  ];
+});
+
 /// Kemajuan harian: soal terjawab hari ini terhadap target.
 final dailyProgressProvider =
     FutureProvider<({int answered, int target})>((ref) async {
@@ -83,6 +95,7 @@ void refreshStudySummary(WidgetRef ref) {
   ref.invalidate(conceptStatusesProvider);
   ref.invalidate(continueConceptProvider);
   ref.invalidate(gamificationProvider);
+  ref.invalidate(studentBadgesProvider);
   ref.invalidate(dailyProgressProvider);
 }
 
@@ -95,5 +108,6 @@ void refreshStudentProviders(Ref ref) {
   ref.invalidate(conceptStatusesProvider);
   ref.invalidate(continueConceptProvider);
   ref.invalidate(gamificationProvider);
+  ref.invalidate(studentBadgesProvider);
   ref.invalidate(dailyProgressProvider);
 }

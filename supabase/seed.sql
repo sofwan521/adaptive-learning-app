@@ -545,7 +545,11 @@ insert into public.badges (code, name, description) values
 ('penjelajah-1', 'Penjelajah', 'Menuntaskan 1 konsep pertama.'),
 ('konsisten-3', 'Konsisten', 'Belajar 3 hari berturut-turut.'),
 ('teliti', 'Teliti', 'Menjawab 5 soal berturut-turut dengan benar.'),
-('master-8', 'Master Matematika Dasar', 'Menguasai seluruh 8 konsep.')
+('master-8', 'Master Matematika Dasar', 'Menguasai seluruh 8 konsep.'),
+('langkah-pertama', 'Langkah Pertama', 'Menyelesaikan sesi kuis pertama.'),
+('beruntun-3', '3 Hari Beruntun', 'Belajar 3 hari berturut-turut.'),
+('konsep-pertama', 'Konsep Pertama Dikuasai', 'Menguasai 1 konsep pertama.'),
+('pahlawan-remedial', 'Pahlawan Remedial', 'Menguasai konsep lewat jalur remedial.')
 on conflict (code) do nothing;
 
 commit;

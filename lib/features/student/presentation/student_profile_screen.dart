@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../domain/gamification/gamification_rules.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../gamification/application/reminder_controller.dart';
+import '../application/student_providers.dart';
 
-/// Profil siswa dengan tombol keluar.
+/// Profil siswa: identitas, ringkasan gamifikasi, lencana,
+/// pengaturan pengingat harian, dan tombol keluar.
 class StudentProfileScreen extends ConsumerWidget {
   const StudentProfileScreen({super.key});
 
@@ -15,25 +20,284 @@ class StudentProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              name.isEmpty ? 'Siswa' : name,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 24),
-            AppButton(
-              label: 'Keluar',
-              variant: AppButtonVariant.secondary,
-              icon: Icons.logout,
-              onPressed: () =>
-                  ref.read(authControllerProvider.notifier).signOut(),
-            ),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async => refreshStudySummary(ref),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                name.isEmpty ? 'Siswa' : name,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 16),
+              _GamificationCard(
+                onRetry: () => refreshStudySummary(ref),
+              ),
+              const SizedBox(height: 16),
+              Text('Lencana', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _BadgesGrid(
+                onRetry: () => refreshStudySummary(ref),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Pengingat belajar',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              const _ReminderCard(),
+              const SizedBox(height: 24),
+              AppButton(
+                label: 'Keluar',
+                variant: AppButtonVariant.secondary,
+                icon: Icons.logout,
+                onPressed: () =>
+                    ref.read(authControllerProvider.notifier).signOut(),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Kartu XP, level (dengan progres ke level berikut), dan streak.
+class _GamificationCard extends ConsumerWidget {
+  final VoidCallback onRetry;
+
+  const _GamificationCard({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gamification = ref.watch(gamificationProvider);
+    return gamification.when(
+      data: (state) {
+        final progress = xpProgressToNextLevel(state.xp);
+        final nextLevel = xpToLevel(state.xp) + 1;
+        final remaining =
+            xpThresholdForLevel(nextLevel) - state.xp;
+        return AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  XpBadge(xp: state.xp),
+                  LevelBadge(level: state.level),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 10,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$remaining XP lagi ke Level $nextLevel',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.local_fire_department,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Streak ${state.streak} hari',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const AppCard(
+        child: LoadingView(message: 'Memuat progres…'),
+      ),
+      error: (error, _) => AppCard(
+        child: ErrorView(
+          message: error is AppException
+              ? error.message
+              : 'Gagal memuat progres.',
+          onRetry: onRetry,
+        ),
+      ),
+    );
+  }
+}
+
+/// Grid seluruh lencana: perolehan berwarna, sisanya redup terkunci.
+class _BadgesGrid extends ConsumerWidget {
+  final VoidCallback onRetry;
+
+  const _BadgesGrid({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badgesAsync = ref.watch(studentBadgesProvider);
+    return badgesAsync.when(
+      data: (badges) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          mainAxisExtent: 132,
+        ),
+        itemCount: badges.length,
+        itemBuilder: (context, index) {
+          final entry = badges[index];
+          final earned = entry.earned;
+          final colors = Theme.of(context).colorScheme;
+          return AppCard(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: earned
+                        ? colors.primaryContainer
+                        : colors.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    earned
+                        ? badgeIconFor(entry.badge.code)
+                        : Icons.lock_outline,
+                    color: earned
+                        ? colors.onPrimaryContainer
+                        : colors.outline,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  entry.badge.name,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  earned ? entry.badge.description : 'Belum diperoleh',
+                  style: Theme.of(context).textTheme.labelSmall,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      loading: () => const AppCard(
+        child: LoadingView(message: 'Memuat lencana…'),
+      ),
+      error: (error, _) => AppCard(
+        child: ErrorView(
+          message: error is AppException
+              ? error.message
+              : 'Gagal memuat lencana.',
+          onRetry: onRetry,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pengaturan pengingat harian: sakelar, jam, dan izin.
+class _ReminderCard extends ConsumerWidget {
+  const _ReminderCard();
+
+  Future<void> _toggle(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    final controller = ref.read(reminderControllerProvider.notifier);
+    final ok = await controller.setEnabled(enabled);
+    if (!ok && enabled && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Izin notifikasi ditolak. Aktifkan di Pengaturan '
+              'perangkat untuk memakai pengingat.',
+            ),
+          ),
+        );
+    }
+  }
+
+  Future<void> _pickTime(BuildContext context, WidgetRef ref) async {
+    final settings = ref.read(reminderControllerProvider);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: settings.hour, minute: settings.minute),
+    );
+    if (picked == null) return;
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .setTime(picked.hour, picked.minute);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(reminderControllerProvider);
+    return AppCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.notifications_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Pengingat harian'),
+              ),
+              Switch(
+                key: const Key('reminder-toggle'),
+                value: settings.enabled,
+                onChanged: (value) => _toggle(context, ref, value),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Jam pengingat'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('reminder-time'),
+                icon: const Icon(Icons.schedule),
+                label: Text(settings.label),
+                onPressed: () => _pickTime(context, ref),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

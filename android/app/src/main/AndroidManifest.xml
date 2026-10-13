@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Izin notifikasi pengingat belajar (Android 13+ meminta saat dipakai). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="Adaptive Learning"
         android:name="${applicationName}"

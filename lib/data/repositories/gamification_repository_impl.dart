@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/error/app_exception.dart';
+import '../../domain/gamification/gamification_rules.dart';
 import '../../domain/models/gamification_state.dart';
 import '../../domain/repositories/gamification_repository.dart';
 import '../datasources/supabase_service.dart';
@@ -60,7 +61,7 @@ class SupabaseGamificationRepository implements GamificationRepository {
       final updated = GamificationState(
         studentId: current.studentId,
         xp: total,
-        level: total ~/ 100 + 1,
+        level: xpToLevel(total),
         streak: current.streak,
         lastActiveDate: current.lastActiveDate,
       );
@@ -78,22 +79,15 @@ class SupabaseGamificationRepository implements GamificationRepository {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final last = current.lastActiveDate;
-      final lastDay =
-          last == null ? null : DateTime(last.year, last.month, last.day);
-
-      final int streak;
-      if (lastDay == null) {
-        streak = 1;
-      } else {
-        final gap = today.difference(lastDay).inDays;
-        if (gap == 0) {
-          return current;
-        } else if (gap == 1) {
-          streak = current.streak + 1;
-        } else {
-          streak = 1;
-        }
+      if (last != null) {
+        final lastDay = DateTime(last.year, last.month, last.day);
+        if (today.difference(lastDay).inDays == 0) return current;
       }
+      final streak = computeStreak(
+        lastActiveDate: last,
+        today: now,
+        currentStreak: current.streak,
+      );
       final updated = GamificationState(
         studentId: current.studentId,
         xp: current.xp,
@@ -103,6 +97,62 @@ class SupabaseGamificationRepository implements GamificationRepository {
       );
       await _save(updated);
       return updated;
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<Set<String>> loadBadgeCodes() async {
+    try {
+      final userId = _userId();
+      final rows = await _client
+          .from('user_badges')
+          .select('badge_id, badges(code)')
+          .eq('user_id', userId);
+      final codes = <String>{};
+      for (final row in (rows as List)) {
+        final map = Map<String, dynamic>.from(row as Map);
+        final badge = map['badges'];
+        final code = badge is Map
+            ? (Map<String, dynamic>.from(badge)['code'] as String?)
+            : null;
+        if (code != null && code.isNotEmpty) codes.add(code);
+      }
+      return codes;
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<bool> awardBadge(String code) async {
+    try {
+      final userId = _userId();
+      final badgeRow = await _client
+          .from('badges')
+          .select('id')
+          .eq('code', code)
+          .maybeSingle();
+      if (badgeRow == null) return false;
+      final badgeId = (badgeRow as Map)['id'] as String;
+      final existing = await _client
+          .from('user_badges')
+          .select('badge_id')
+          .eq('user_id', userId)
+          .eq('badge_id', badgeId)
+          .maybeSingle();
+      if (existing != null) return false;
+      try {
+        await _client.from('user_badges').insert({
+          'user_id': userId,
+          'badge_id': badgeId,
+        });
+      } catch (_) {
+        // Balapan pemberian ganda: anggap sudah dimiliki.
+        return false;
+      }
+      return true;
     } catch (e) {
       throw mapToAppException(e);
     }

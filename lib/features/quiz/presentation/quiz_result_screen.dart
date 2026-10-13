@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../domain/gamification/badges.dart';
+import '../../../domain/gamification/gamification_rules.dart';
 import '../../../domain/irt/irt_engine.dart';
 import '../application/quiz_controller.dart';
 
@@ -58,6 +60,38 @@ class _MasteredBody extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Center(child: XpBadge(xp: state.xpEarned)),
+          if (state.leveledUp) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: LevelBadge(level: xpToLevel(state.xpTotal)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Naik level! Pertahankan streak belajarmu.',
+              style: textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+          if (state.newBadges.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final code in state.newBadges)
+                  Chip(
+                    key: Key('quiz-new-badge-$code'),
+                    avatar: Icon(
+                      badgeIconFor(code),
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    label: Text(_badgeName(code)),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           AppCard(
             child: Column(
@@ -243,4 +277,12 @@ class _FailedBody extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Nama lencana dari kode; kode asing ditampilkan apa adanya.
+String _badgeName(String code) {
+  for (final badge in kAppBadges) {
+    if (badge.code == code) return badge.name;
+  }
+  return code;
 }

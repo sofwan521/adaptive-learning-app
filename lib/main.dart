@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/utils/supabase_config.dart';
+import 'data/datasources/reminder_store.dart';
 import 'data/datasources/supabase_service.dart';
+import 'features/gamification/application/notification_scheduler.dart';
 
 /// Entry point AdaptiLearn.
 ///
@@ -20,5 +22,24 @@ Future<void> main() async {
     );
   }
 
+  // Pulihkan jadwal pengingat harian (mis. setelah reboot).
+  await _restoreDailyReminder();
+
   runApp(const ProviderScope(child: AdaptiLearnApp()));
+}
+
+/// Jadwalkan ulang pengingat bila masih aktif. Best-effort.
+Future<void> _restoreDailyReminder() async {
+  try {
+    final settings = await const SharedPreferencesReminderStore().load();
+    if (!settings.enabled) return;
+    final scheduler = FlutterNotificationScheduler();
+    await scheduler.initialize();
+    await scheduler.scheduleDailyReminder(
+      hour: settings.hour,
+      minute: settings.minute,
+    );
+  } catch (_) {
+    // Notifikasi best-effort; aplikasi tetap berjalan tanpanya.
+  }
 }
