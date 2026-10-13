@@ -112,7 +112,8 @@ void main() {
 
       await tester.tap(find.text('Progres'));
       await _pumpFrames(tester);
-      expect(find.text('Grafik progres segera hadir.'), findsOneWidget);
+      expect(find.text('Ringkasan'), findsOneWidget);
+      expect(find.text('Perkembangan Theta'), findsOneWidget);
 
       await tester.tap(find.text('Profil'));
       await _pumpFrames(tester);

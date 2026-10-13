@@ -2,6 +2,7 @@
 import '../models/ability_estimate.dart';
 import '../models/pending_response.dart';
 import '../models/quiz_session.dart';
+import '../models/response_history.dart';
 import '../models/student_concept_state.dart';
 
 /// Kemampuan, state konsep, sesi, dan jawaban siswa.
@@ -44,4 +45,10 @@ abstract class ProgressRepository {
 
   /// Riwayat sesi kuis terbaru.
   Future<List<QuizSession>> history({int limit = 20});
+
+  /// Jawaban terbaru terurut waktu menaik (maks [limit]).
+  ///
+  /// Dipakai dasbor progres: titik theta per respons, akurasi
+  /// 7 hari, total soal, dan skor tiap sesi.
+  Future<List<ResponseHistoryEntry>> loadResponseHistory({int limit = 300});
 }

@@ -9,6 +9,7 @@ import 'package:adaptive_learning_app/domain/models/gamification_state.dart';
 import 'package:adaptive_learning_app/domain/models/learning_material.dart';
 import 'package:adaptive_learning_app/domain/models/pending_response.dart';
 import 'package:adaptive_learning_app/domain/models/quiz_session.dart';
+import 'package:adaptive_learning_app/domain/models/response_history.dart';
 import 'package:adaptive_learning_app/domain/models/student_concept_state.dart';
 import 'package:adaptive_learning_app/domain/models/user_profile.dart';
 import 'package:adaptive_learning_app/domain/models/user_role.dart';
@@ -137,13 +138,19 @@ class FakeConceptRepository implements ConceptRepository {
 
 class FakeProgressRepository implements ProgressRepository {
   List<StudentConceptState> states;
+  List<QuizSession> sessions;
+  List<ResponseHistoryEntry> responses;
   int answeredToday;
   AppException? failure;
 
   FakeProgressRepository({
     List<StudentConceptState>? states,
+    List<QuizSession>? sessions,
+    List<ResponseHistoryEntry>? responses,
     this.answeredToday = 0,
-  }) : states = states ?? [];
+  })  : states = states ?? [],
+        sessions = sessions ?? [],
+        responses = responses ?? [];
 
   @override
   Future<List<StudentConceptState>> loadConceptStates() async {
@@ -187,7 +194,18 @@ class FakeProgressRepository implements ProgressRepository {
   }) async {}
 
   @override
-  Future<List<QuizSession>> history({int limit = 20}) async => [];
+  Future<List<QuizSession>> history({int limit = 20}) async {
+    if (failure != null) throw failure!;
+    return sessions.take(limit).toList();
+  }
+
+  @override
+  Future<List<ResponseHistoryEntry>> loadResponseHistory({
+    int limit = 300,
+  }) async {
+    if (failure != null) throw failure!;
+    return responses.take(limit).toList();
+  }
 }
 
 class FakeGamificationRepository implements GamificationRepository {

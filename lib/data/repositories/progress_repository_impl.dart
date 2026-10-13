@@ -8,6 +8,7 @@ import '../../domain/models/ability_estimate.dart';
 import '../../domain/models/concept_status.dart';
 import '../../domain/models/pending_response.dart';
 import '../../domain/models/quiz_session.dart';
+import '../../domain/models/response_history.dart';
 import '../../domain/models/student_concept_state.dart';
 import '../../domain/repositories/progress_repository.dart';
 import '../datasources/pending_response_store.dart';
@@ -265,6 +266,27 @@ class SupabaseProgressRepository implements ProgressRepository {
         for (final row in (rows as List))
           QuizSession.fromRow(Map<String, dynamic>.from(row)),
       ];
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<List<ResponseHistoryEntry>> loadResponseHistory({
+    int limit = 300,
+  }) async {
+    try {
+      final userId = _userId();
+      final rows = await _client
+          .from('responses')
+          .select('session_id,is_correct,theta_after,answered_at')
+          .eq('student_id', userId)
+          .order('answered_at', ascending: true)
+          .limit(limit);
+      return [
+        for (final row in (rows as List))
+          ResponseHistoryEntry.fromRow(Map<String, dynamic>.from(row)),
+      ].whereType<ResponseHistoryEntry>().toList();
     } catch (e) {
       throw mapToAppException(e);
     }

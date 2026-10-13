@@ -12,6 +12,7 @@ import 'package:adaptive_learning_app/domain/models/concept_status.dart';
 import 'package:adaptive_learning_app/domain/models/item.dart';
 import 'package:adaptive_learning_app/domain/models/pending_response.dart';
 import 'package:adaptive_learning_app/domain/models/quiz_session.dart';
+import 'package:adaptive_learning_app/domain/models/response_history.dart';
 import 'package:adaptive_learning_app/domain/repositories/item_repository.dart';
 import 'package:adaptive_learning_app/domain/repositories/progress_repository.dart';
 import 'package:adaptive_learning_app/features/auth/application/auth_controller.dart';
@@ -129,6 +130,12 @@ class RecordingProgressRepository implements ProgressRepository {
 
   @override
   Future<List<QuizSession>> history({int limit = 20}) async => [];
+
+  @override
+  Future<List<ResponseHistoryEntry>> loadResponseHistory({
+    int limit = 300,
+  }) async =>
+      [];
 }
 
 class FixedAuthController extends AuthController {
