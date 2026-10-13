@@ -74,7 +74,7 @@ void main() {
 
       await tester.tap(find.text('Peta'));
       await _pumpFrames(tester);
-      expect(find.text('Peta konsep segera hadir.'), findsOneWidget);
+      expect(find.text('Legenda'), findsOneWidget);
 
       await tester.tap(find.text('Progres'));
       await _pumpFrames(tester);
