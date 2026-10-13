@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Belum punya akun? '),
+                      const Text('Belum punya akun? '),
                       TextButton(
                         onPressed: () => context.push('/register'),
                         child: const Text('Daftar'),

@@ -10,10 +10,10 @@ class LearningProvider with ChangeNotifier {
   final KnowledgeGraphService _graphService;
 
   List<Concept> _concepts = [];
-  Set<String> _masteredConceptIds = {};
+  final Set<String> _masteredConceptIds = {};
   Question? _currentQuestion;
-  List<QuizResponse> _responses = [];
-  bool _isLoading = false;
+  final List<QuizResponse> _responses = [];
+  final bool _isLoading = false;
 
   LearningProvider(this._irtService, this._graphService) {
     _initializeMockData();

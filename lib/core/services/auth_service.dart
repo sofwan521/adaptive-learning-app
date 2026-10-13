@@ -17,8 +17,8 @@ class AuthService {
     // Simulasi login (dalam production, panggil API)
     await Future.delayed(const Duration(seconds: 1));
 
-    // Hash password
-    final hashedPassword = _hashPassword(password);
+    // Hash password (dipakai saat integrasi API nanti)
+    _hashPassword(password);
 
     // Mock user data - dalam production, ambil dari API
     if (email == 'student@test.com' && password == 'password') {

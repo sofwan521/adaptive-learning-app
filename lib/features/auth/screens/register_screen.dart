@@ -109,7 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Role Selection
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Peran',
                     prefixIcon: Icon(Icons.badge),
@@ -132,7 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Grade Selection (only for students)
                 if (_selectedRole == 'student')
                   DropdownButtonFormField<int>(
-                    value: _selectedGrade,
+                    initialValue: _selectedGrade,
                     decoration: const InputDecoration(
                       labelText: 'Tingkat Kelas',
                       prefixIcon: Icon(Icons.grade),

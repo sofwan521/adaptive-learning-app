@@ -324,7 +324,7 @@ class HomeScreen extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        const Text(
                           'Kamu sudah menguasai semua konsep yang tersedia',
                           textAlign: TextAlign.center,
                         ),

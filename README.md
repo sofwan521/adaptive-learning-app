@@ -1,183 +1,54 @@
-# Adaptive Learning App
+# AdaptiLearn
 
-Aplikasi mobile pembelajaran adaptif berbasis **Knowledge Graph** dan **Item Response Theory (IRT)** untuk mata pelajaran Matematika.
+Aplikasi mobile pembelajaran adaptif (SMP/SMA, Matematika dasar) berbasis
+Knowledge Graph dan IRT 2PL. Bahasa UI: Bahasa Indonesia.
 
-## 📱 Fitur Utama
+Lihat `AGENTS.md` untuk konteks wajib (stack, arsitektur, rumus, kriteria selesai).
 
-- **Placement Test Adaptif** - Mengukur kemampuan siswa menggunakan algoritma IRT 2PL
-- **Knowledge Graph** - Peta konsep dengan visualisasi dependencies antar materi
-- **Adaptive Learning** - Materi dan soal menyesuaikan kemampuan siswa secara real-time
-- **Remedial Path** - Sistem otomatis merekomendasikan materi prasyarat yang perlu dipelajari
-- **Progress Dashboard** - Tracking kemampuan dengan grafik dan analitik
-- **Gamification** - XP, Level, dan Streak untuk meningkatkan motivasi belajar
+## Stack
 
-## 🏗️ Teknologi
+Flutter + Dart, Riverpod, go_router, supabase_flutter, fl_chart,
+flutter_local_notifications, shared_preferences. Tanpa code generation.
 
-- **Flutter** 3.0+
-- **Provider** - State Management
-- **Go Router** - Navigation
-- **Shared Preferences** - Local Storage
-- **FL Chart** - Data Visualization
-- **GraphView** - Knowledge Graph Visualization
+## Struktur
 
-## 📋 Prasyarat
-
-- Flutter SDK 3.0 atau lebih baru
-- Android Studio / VS Code dengan Flutter extension
-- Android SDK (untuk Android) atau Xcode (untuk iOS)
-- Dart SDK
-
-## 🚀 Cara Menjalankan
-
-### 1. Install Dependencies
-
-```bash
-cd C:\Users\sofwa\adaptive_learning_app
-flutter pub get
+```text
+lib/
+├── app.dart
+├── main.dart
+├── core/ (constants, theme, router, utils)
+├── domain/ (irt, graph, models — murni Dart, tanpa Flutter)
+├── data/ (datasources, repositories)
+└── features/home/ (presentation, application)
 ```
 
-### 2. Jalankan Aplikasi
+Kode lama (`lib/core/models`, `lib/core/services`, dst.) dipertahankan
+sementara untuk migrasi bertahap.
 
-**Menggunakan Android Studio:**
-1. Buka folder `adaptive_learning_app` di Android Studio
-2. Buka file `lib/main.dart`
-3. Pilih device/emulator
-4. Klik tombol Run (▶️) atau tekan `Shift + F10`
+## Cara menjalankan
 
-**Menggunakan Command Line:**
 ```bash
-# Debug mode
+flutter pub get
+
+# Tanpa backend (layar kosong tetap tampil)
 flutter run
 
-# Release mode
-flutter run --release
-
-# Pilih device spesifik
-flutter devices
-flutter run -d <device-id>
+# Dengan Supabase (disarankan via --dart-define)
+flutter run \
+  --dart-define=SUPABASE_URL=https://contoh.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=isi-anon-key-di-sini
 ```
 
-### 3. Build APK (Optional)
+Salin `.env.example` menjadi `.env` bila perlu simpan kunci lokal
+(file `.env` sudah di-gitignore — jangan commit kunci asli).
+
+## Cek kualitas
 
 ```bash
-# Build APK untuk testing
-flutter build apk
-
-# Build APK split per ABI (ukuran lebih kecil)
-flutter build apk --split-per-abi
-
-# Output: build/app/outputs/flutter-apk/
+flutter analyze
+flutter test
 ```
 
-## 👤 Akun Demo
+## Tim
 
-**Siswa:**
-- Email: `student@test.com`
-- Password: `password`
-
-**Guru:**
-- Email: `teacher@test.com`
-- Password: `password`
-
-## 📁 Struktur Folder
-
-```
-lib/
-├── main.dart                          # Entry point aplikasi
-├── core/                              # Core functionality
-│   ├── models/                        # Data models
-│   │   ├── user.dart
-│   │   ├── concept.dart
-│   │   ├── question.dart
-│   │   └── quiz_response.dart
-│   ├── services/                      # Business logic
-│   │   ├── auth_service.dart
-│   │   ├── irt_service.dart          # IRT implementation
-│   │   └── knowledge_graph_service.dart
-│   └── routes/
-│       └── app_router.dart            # Navigation
-└── features/                          # Feature modules
-    ├── auth/
-    │   ├── providers/
-    │   └── screens/
-    ├── home/
-    ├── placement_test/
-    ├── learning/
-    │   ├── providers/
-    │   └── screens/
-    │       ├── concept_map_screen.dart
-    │       ├── quiz_screen.dart
-    │       └── learning_material_screen.dart
-    ├── progress/
-    └── profile/
-```
-
-## 🧮 Algoritma IRT (Item Response Theory)
-
-Aplikasi menggunakan **2PL (Two-Parameter Logistic) Model**:
-
-```
-P(θ) = 1 / (1 + e^(-a(θ - b)))
-```
-
-Dimana:
-- `θ` (theta) = Kemampuan siswa
-- `a` = Discrimination parameter (daya pembeda soal)
-- `b` = Difficulty parameter (tingkat kesulitan soal)
-- `P(θ)` = Probabilitas jawaban benar
-
-**Adaptive Selection:**
-Soal dipilih berdasarkan **maximum information** pada theta siswa saat ini:
-
-```
-I(θ) = a² * P(θ) * (1 - P(θ))
-```
-
-## 🗺️ Knowledge Graph
-
-Knowledge Graph merepresentasikan:
-- **Nodes** = Konsep matematika
-- **Edges** = Hubungan prasyarat (prerequisite)
-
-**Algoritma yang digunakan:**
-- **Topological Sort** - Menentukan urutan belajar optimal
-- **DFS/BFS** - Penelusuran graf untuk remedial path
-- **Lock/Unlock Logic** - Konsep terkunci sampai prasyarat dikuasai
-
-## 🎯 Fitur yang Akan Datang
-
-- [ ] Teacher dashboard untuk monitoring siswa
-- [ ] Bank soal dinamis dari server
-- [ ] Video pembelajaran terintegrasi
-- [ ] Chat dengan guru/AI tutor
-- [ ] Leaderboard dan achievements
-- [ ] Export laporan PDF
-- [ ] Mode offline lengkap
-- [ ] Multi-subject (Fisika, Kimia, dll)
-
-## 👨‍💻 Developer
-
-**Kelompok 2:**
-- Dika Muhammad Iqbal Marangga (240605110158)
-- Sofwan Hakim Sayyidan (240605110181)
-
-**Dosen Pengampu:**
-- SUPRIYONO, M.Kom
-
-**Institusi:**
-Program Studi Teknik Informatika  
-Fakultas Sains dan Teknologi  
-Universitas Islam Negeri Maulana Malik Ibrahim Malang  
-2026
-
-## 📄 Lisensi
-
-Project ini dibuat untuk keperluan akademik Tugas Akhir.
-
-## 🐛 Bug Report
-
-Jika menemukan bug atau ingin memberikan saran, silakan buat issue atau hubungi developer.
-
----
-
-**Happy Learning! 📚✨**
+Kelompok 2 — UIN Maulana Malik Ibrahim Malang (2026).

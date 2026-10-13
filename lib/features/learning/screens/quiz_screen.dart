@@ -21,7 +21,6 @@ class _QuizScreenState extends State<QuizScreen> {
   int? _selectedAnswer;
   bool _showResult = false;
   int _correctAnswers = 0;
-  DateTime? _questionStartTime;
 
   @override
   void initState() {
@@ -33,7 +32,6 @@ class _QuizScreenState extends State<QuizScreen> {
     final learningProvider = context.read<LearningProvider>();
     setState(() {
       _questions = learningProvider.getMockQuestions(widget.conceptId);
-      _questionStartTime = DateTime.now();
     });
   }
 
@@ -57,7 +55,6 @@ class _QuizScreenState extends State<QuizScreen> {
         _currentQuestionIndex++;
         _selectedAnswer = null;
         _showResult = false;
-        _questionStartTime = DateTime.now();
       });
     } else {
       _finishQuiz();
@@ -135,7 +132,6 @@ class _QuizScreenState extends State<QuizScreen> {
                   _selectedAnswer = null;
                   _showResult = false;
                   _correctAnswers = 0;
-                  _questionStartTime = DateTime.now();
                 });
               },
               child: const Text('Coba Lagi'),
@@ -161,8 +157,6 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     final currentQuestion = _questions[_currentQuestionIndex];
-    final isCorrect = _showResult &&
-        _selectedAnswer == currentQuestion.correctAnswerIndex;
 
     return Scaffold(
       appBar: AppBar(
