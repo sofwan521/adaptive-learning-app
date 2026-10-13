@@ -13,12 +13,20 @@ class Concept extends Equatable {
   final List<String> prerequisiteIds;
   final ConceptStatus status;
 
+  /// Kode stabil konsep (mis. K01 pada seed).
+  final String code;
+
+  /// Ambang penguasaan theta_konsep (tau) dari backend.
+  final double tau;
+
   const Concept({
     required this.id,
     required this.name,
     required this.description,
     this.prerequisiteIds = const [],
     this.status = ConceptStatus.locked,
+    this.code = '',
+    this.tau = 0.0,
   });
 
   Concept copyWith({
@@ -27,6 +35,8 @@ class Concept extends Equatable {
     String? description,
     List<String>? prerequisiteIds,
     ConceptStatus? status,
+    String? code,
+    double? tau,
   }) {
     return Concept(
       id: id ?? this.id,
@@ -34,6 +44,8 @@ class Concept extends Equatable {
       description: description ?? this.description,
       prerequisiteIds: prerequisiteIds ?? this.prerequisiteIds,
       status: status ?? this.status,
+      code: code ?? this.code,
+      tau: tau ?? this.tau,
     );
   }
 
@@ -47,6 +59,8 @@ class Concept extends Equatable {
           ? prereqs.map((e) => e.toString()).toList()
           : const [],
       status: ConceptStatus.fromString(json['status'] as String?),
+      code: json['code'] as String? ?? '',
+      tau: (json['tau'] as num? ?? 0.0).toDouble(),
     );
   }
 
@@ -57,9 +71,12 @@ class Concept extends Equatable {
       'description': description,
       'prerequisiteIds': prerequisiteIds,
       'status': status.name,
+      'code': code,
+      'tau': tau,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, description, prerequisiteIds, status];
+  List<Object?> get props =>
+      [id, name, description, prerequisiteIds, status, code, tau];
 }
