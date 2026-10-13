@@ -3,12 +3,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/error/app_exception.dart';
 import '../../domain/models/class_info.dart';
+import '../../domain/models/concept_status.dart';
+import '../../domain/models/quiz_session.dart';
+import '../../domain/models/student_concept_state.dart';
 import '../../domain/repositories/teacher_repository.dart';
 import '../datasources/supabase_service.dart';
 
 /// Implementasi [TeacherRepository] memakai tabel `classes`,
 /// `class_members`, `profiles`, `student_ability`,
-/// `student_concept_state`, dan `gamification`.
+/// `student_concept_state`, `gamification`, `quiz_sessions`,
+/// `concepts`, dan fungsi `join_class`.
+///
+/// Semua baca tulis melewati RLS: guru hanya melihat murid di
+/// kelasnya, siswa hanya kelas yang diikuti dan datanya sendiri.
 class SupabaseTeacherRepository implements TeacherRepository {
   final SupabaseClient _client;
 
@@ -32,9 +39,23 @@ class SupabaseTeacherRepository implements TeacherRepository {
           .select()
           .eq('teacher_id', userId)
           .order('created_at');
-      return [
+      final infos = [
         for (final row in (rows as List))
           ClassInfo.fromRow(Map<String, dynamic>.from(row)),
+      ];
+      if (infos.isEmpty) return infos;
+      final memberRows = await _client
+          .from('class_members')
+          .select('class_id')
+          .inFilter('class_id', [for (final info in infos) info.id]);
+      final counts = <String, int>{};
+      for (final row in (memberRows as List)) {
+        final classId = row['class_id'] as String;
+        counts[classId] = (counts[classId] ?? 0) + 1;
+      }
+      return [
+        for (final info in infos)
+          info.copyWith(memberCount: counts[info.id] ?? 0),
       ];
     } catch (e) {
       throw mapToAppException(e);
@@ -45,9 +66,13 @@ class SupabaseTeacherRepository implements TeacherRepository {
   Future<ClassInfo> createClass(String name) async {
     try {
       final userId = _userId();
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) {
+        throw const AppException('Nama kelas tidak boleh kosong.');
+      }
       final row = await _client
           .from('classes')
-          .insert({'teacher_id': userId, 'name': name})
+          .insert({'teacher_id': userId, 'name': trimmed})
           .select()
           .single();
       return ClassInfo.fromRow(Map<String, dynamic>.from(row));
@@ -81,6 +106,7 @@ class SupabaseTeacherRepository implements TeacherRepository {
         return ClassReport(
           classId: classId,
           className: classMap['name'] as String? ?? '',
+          joinCode: classMap['join_code'] as String? ?? '',
           totalConcepts: total,
         );
       }
@@ -99,7 +125,7 @@ class SupabaseTeacherRepository implements TeacherRepository {
           .inFilter('student_id', studentIds);
       final gamification = await _client
           .from('gamification')
-          .select('student_id,xp')
+          .select('student_id,xp,last_active_date')
           .inFilter('student_id', studentIds);
 
       String byId(List rows, String idKey, String id, String field) {
@@ -133,10 +159,23 @@ class SupabaseTeacherRepository implements TeacherRepository {
         return 0;
       }
 
+      DateTime? lastActiveOf(String id) {
+        for (final row in (gamification as List)) {
+          if (row['student_id'] == id) {
+            final raw = row['last_active_date'];
+            if (raw == null) return null;
+            if (raw is DateTime) return raw;
+            return DateTime.tryParse(raw.toString());
+          }
+        }
+        return null;
+      }
+
       final total = await _conceptCount();
       return ClassReport(
         classId: classId,
         className: classMap['name'] as String? ?? '',
+        joinCode: classMap['join_code'] as String? ?? '',
         totalConcepts: total,
         members: [
           for (final id in studentIds)
@@ -146,9 +185,116 @@ class SupabaseTeacherRepository implements TeacherRepository {
               theta: thetaOf(id),
               masteredCount: masteredOf(id),
               xp: xpOf(id),
+              lastActive: lastActiveOf(id),
             ),
         ],
       );
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<List<ClassInfo>> myClasses() async {
+    try {
+      final userId = _userId();
+      final memberRows = await _client
+          .from('class_members')
+          .select('class_id')
+          .eq('student_id', userId);
+      final classIds = [
+        for (final row in (memberRows as List)) row['class_id'] as String,
+      ];
+      if (classIds.isEmpty) return [];
+      final rows = await _client
+          .from('classes')
+          .select()
+          .inFilter('id', classIds)
+          .order('created_at');
+      return [
+        for (final row in (rows as List))
+          ClassInfo.fromRow(Map<String, dynamic>.from(row)),
+      ];
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<String> joinClass(String code) async {
+    try {
+      _userId();
+      final normalized = code.trim().toUpperCase();
+      if (normalized.isEmpty) {
+        throw const AppException('Kode kelas tidak boleh kosong.');
+      }
+      final result = await _client.rpc(
+        'join_class',
+        params: {'p_code': normalized},
+      );
+      return (result ?? '').toString();
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<List<ConceptFailRate>> conceptFailRates(String classId) async {
+    try {
+      final memberRows = await _client
+          .from('class_members')
+          .select('student_id')
+          .eq('class_id', classId);
+      final studentIds = [
+        for (final row in (memberRows as List)) row['student_id'] as String,
+      ];
+      if (studentIds.isEmpty) return [];
+      final sessionRows = await _client
+          .from('quiz_sessions')
+          .select()
+          .inFilter('student_id', studentIds)
+          .limit(1000);
+      final conceptRows = await _client
+          .from('concepts')
+          .select('id,tau')
+          .limit(1000);
+      final taus = <String, double>{};
+      for (final raw in (conceptRows as List)) {
+        final row = Map<String, dynamic>.from(raw);
+        taus[row['id'] as String] =
+            (row['tau'] as num? ?? 0).toDouble();
+      }
+      return rankFailedConcepts(
+        sessions: [
+          for (final row in (sessionRows as List))
+            QuizSession.fromRow(Map<String, dynamic>.from(row)),
+        ],
+        taus: taus,
+      );
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
+  Future<List<StudentConceptState>> memberConceptStates(
+    String studentId,
+  ) async {
+    try {
+      final rows = await _client
+          .from('student_concept_state')
+          .select()
+          .eq('student_id', studentId);
+      return [
+        for (final row in (rows as List))
+          StudentConceptState(
+            studentId: row['student_id'] as String,
+            conceptId: row['concept_id'] as String,
+            status: ConceptStatus.fromString(row['status'] as String?),
+            thetaC: (row['theta_c'] as num? ?? 0).toDouble(),
+            nAnswered: row['n_answered'] as int? ?? 0,
+          ),
+      ];
     } catch (e) {
       throw mapToAppException(e);
     }

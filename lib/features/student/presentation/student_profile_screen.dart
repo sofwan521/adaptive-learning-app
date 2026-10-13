@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/validators.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../data/repositories/teacher_repository_impl.dart';
 import '../../../domain/gamification/gamification_rules.dart';
+import '../../../domain/models/class_info.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../gamification/application/reminder_controller.dart';
 import '../application/student_providers.dart';
@@ -49,6 +52,10 @@ class StudentProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               const _ReminderCard(),
+              const SizedBox(height: 16),
+              Text('Kelas', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              const _JoinClassCard(),
               const SizedBox(height: 24),
               AppButton(
                 label: 'Keluar',
@@ -296,6 +303,173 @@ class _ReminderCard extends ConsumerWidget {
                 onPressed: () => _pickTime(context, ref),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kartu gabung kelas: daftar kelas yang diikuti plus input kode.
+///
+/// Kode divalidasi 6 karakter alfanumerik lalu dikirim ke RPC
+/// `join_class`; RLS memastikan siswa hanya bergabung untuk dirinya.
+class _JoinClassCard extends ConsumerStatefulWidget {
+  const _JoinClassCard();
+
+  @override
+  ConsumerState<_JoinClassCard> createState() => _JoinClassCardState();
+}
+
+class _JoinClassCardState extends ConsumerState<_JoinClassCard> {
+  final _formKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController();
+  late Future<List<ClassInfo>> _classesFuture;
+  bool _joining = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _classesFuture = _load();
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<List<ClassInfo>> _load() async {
+    return ref.read(teacherRepositoryProvider).myClasses();
+  }
+
+  void _reload() {
+    setState(() {
+      _classesFuture = _load();
+    });
+  }
+
+  Future<void> _join() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _joining = true);
+    try {
+      await ref
+          .read(teacherRepositoryProvider)
+          .joinClass(_codeController.text);
+      _codeController.clear();
+      _reload();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Berhasil bergabung ke kelas!'),
+            ),
+          );
+      }
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FutureBuilder<List<ClassInfo>>(
+            future: _classesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(),
+                );
+              }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Gagal memuat kelas.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _reload,
+                        child: const Text('Muat ulang'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final classes = snapshot.data ?? [];
+              if (classes.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Kamu belum bergabung ke kelas mana pun.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final classInfo in classes)
+                      Chip(
+                        avatar: const Icon(Icons.class_outlined, size: 16),
+                        label: Text(classInfo.name),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          Form(
+            key: _formKey,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    key: const Key('join-code-field'),
+                    controller: _codeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Kode kelas',
+                      hintText: 'cth. AB12CD',
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 6,
+                    validator: validateClassCode,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton(
+                  key: const Key('join-class-submit'),
+                  onPressed: _joining ? null : _join,
+                  child: _joining
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Gabung'),
+                ),
+              ],
+            ),
           ),
         ],
       ),

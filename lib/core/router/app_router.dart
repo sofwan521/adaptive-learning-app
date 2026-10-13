@@ -19,6 +19,8 @@ import '../../features/student/presentation/student_map_screen.dart';
 import '../../features/student/presentation/student_profile_screen.dart';
 import '../../features/student/presentation/student_progress_screen.dart';
 import '../../features/student/presentation/student_shell.dart';
+import '../../features/teacher/presentation/class_detail_screen.dart';
+import '../../features/teacher/presentation/student_detail_screen.dart';
 import '../../features/teacher/presentation/teacher_classes_screen.dart';
 
 /// Rute bersama AdaptiLearn.
@@ -36,6 +38,14 @@ abstract final class AppRoutes {
   static const String studentProfile = '/student/profile';
   static const String teacherClasses = '/teacher/classes';
   static const String gallery = '/dev/gallery';
+
+  /// Rute detail satu kelas milik guru.
+  static String teacherClassDetail(String classId) =>
+      '/teacher/classes/$classId';
+
+  /// Rute detail satu murid dalam kelas.
+  static String teacherStudentDetail(String classId, String studentId) =>
+      '/teacher/classes/$classId/students/$studentId';
 
   /// Rute kuis satu konsep. [from] opsional: id konsep asal bila
   /// kuis dikerjakan sebagai remedial.
@@ -220,6 +230,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.teacherClasses,
         name: 'teacher-classes',
         builder: (context, state) => const TeacherClassesScreen(),
+      ),
+      GoRoute(
+        path: '/teacher/classes/:classId',
+        name: 'teacher-class-detail',
+        builder: (context, state) {
+          final classId = state.pathParameters['classId']!;
+          return ClassDetailScreen(classId: classId);
+        },
+      ),
+      GoRoute(
+        path: '/teacher/classes/:classId/students/:studentId',
+        name: 'teacher-student-detail',
+        builder: (context, state) {
+          final classId = state.pathParameters['classId']!;
+          final studentId = state.pathParameters['studentId']!;
+          return StudentDetailScreen(
+            classId: classId,
+            studentId: studentId,
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.gallery,
