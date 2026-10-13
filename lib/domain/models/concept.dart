@@ -1,10 +1,12 @@
+import 'package:equatable/equatable.dart';
+
 import 'concept_status.dart';
 
 /// Konsep Matematika dalam Knowledge Graph.
 ///
-/// Class Dart biasa (tanpa code generation).
+/// Immutable + Equatable (tanpa code generation).
 /// Logika murni — tanpa import Flutter.
-class Concept {
+class Concept extends Equatable {
   final String id;
   final String name;
   final String description;
@@ -57,4 +59,7 @@ class Concept {
       'status': status.name,
     };
   }
+
+  @override
+  List<Object?> get props => [id, name, description, prerequisiteIds, status];
 }
