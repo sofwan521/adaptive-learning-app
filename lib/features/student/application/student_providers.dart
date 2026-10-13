@@ -85,3 +85,15 @@ void refreshStudySummary(WidgetRef ref) {
   ref.invalidate(gamificationProvider);
   ref.invalidate(dailyProgressProvider);
 }
+
+/// Muat ulang seluruh ringkasan belajar dari NotifierRef.
+///
+/// Isi sama dengan [refreshStudySummary]; dipisah karena Riverpod 3
+/// membedakan tipe [Ref] dan [WidgetRef].
+void refreshStudentProviders(Ref ref) {
+  ref.invalidate(knowledgeGraphProvider);
+  ref.invalidate(conceptStatusesProvider);
+  ref.invalidate(continueConceptProvider);
+  ref.invalidate(gamificationProvider);
+  ref.invalidate(dailyProgressProvider);
+}

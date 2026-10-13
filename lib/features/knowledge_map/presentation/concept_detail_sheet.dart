@@ -90,7 +90,7 @@ Future<void> showConceptDetailSheet(
               icon: Icons.menu_book,
               onPressed: () {
                 Navigator.of(sheetContext).pop();
-                context.push(AppRoutes.studentQuiz(concept.id));
+                context.push(AppRoutes.studentMaterial(concept.id));
               },
             ),
           ],

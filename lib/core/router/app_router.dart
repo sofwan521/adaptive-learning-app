@@ -9,7 +9,8 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/dev/presentation/gallery_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
-import '../../features/learning/presentation/quiz_screen.dart';
+import '../../features/concept/presentation/concept_screen.dart';
+import '../../features/quiz/presentation/quiz_screen.dart';
 import '../../features/placement/presentation/placement_result_screen.dart';
 import '../../features/placement/presentation/placement_screen.dart';
 import '../../features/placement/presentation/placement_test_screen.dart';
@@ -36,8 +37,15 @@ abstract final class AppRoutes {
   static const String teacherClasses = '/teacher/classes';
   static const String gallery = '/dev/gallery';
 
-  /// Rute kuis satu konsep.
-  static String studentQuiz(String conceptId) => '/student/quiz/$conceptId';
+  /// Rute kuis satu konsep. [from] opsional: id konsep asal bila
+  /// kuis dikerjakan sebagai remedial.
+  static String studentQuiz(String conceptId, {String? from}) =>
+      '/student/quiz/$conceptId${from == null ? '' : '?from=$from'}';
+
+  /// Rute materi satu konsep. [from] opsional: id konsep asal bila
+  /// materi dibuka sebagai remedial.
+  static String studentMaterial(String conceptId, {String? from}) =>
+      '/student/material/$conceptId${from == null ? '' : '?from=$from'}';
 }
 
 /// Rute publik yang boleh dibuka tanpa sesi.
@@ -187,11 +195,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: '/student/material/:conceptId',
+        name: 'student-material',
+        builder: (context, state) {
+          final conceptId = state.pathParameters['conceptId']!;
+          return ConceptScreen(
+            conceptId: conceptId,
+            from: state.uri.queryParameters['from'],
+          );
+        },
+      ),
+      GoRoute(
         path: '/student/quiz/:conceptId',
         name: 'student-quiz',
         builder: (context, state) {
           final conceptId = state.pathParameters['conceptId']!;
-          return QuizScreen(conceptId: conceptId);
+          return QuizScreen(
+            conceptId: conceptId,
+            from: state.uri.queryParameters['from'],
+          );
         },
       ),
       GoRoute(
