@@ -24,6 +24,7 @@ class SupabaseItemRepository implements ItemRepository {
       correctIndex: row['correct_index'] as int? ?? 0,
       a: (row['a'] as num? ?? 1).toDouble(),
       b: (row['b'] as num? ?? 0).toDouble(),
+      explanation: row['explanation'] as String? ?? '',
     );
   }
 

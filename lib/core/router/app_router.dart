@@ -10,7 +10,9 @@ import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/dev/presentation/gallery_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/learning/presentation/quiz_screen.dart';
+import '../../features/placement/presentation/placement_result_screen.dart';
 import '../../features/placement/presentation/placement_screen.dart';
+import '../../features/placement/presentation/placement_test_screen.dart';
 import '../../features/student/presentation/student_home_screen.dart';
 import '../../features/student/presentation/student_map_screen.dart';
 import '../../features/student/presentation/student_profile_screen.dart';
@@ -25,6 +27,8 @@ abstract final class AppRoutes {
   static const String register = '/register';
   static const String home = '/';
   static const String placement = '/placement';
+  static const String placementTest = '/placement/test';
+  static const String placementResult = '/placement/result';
   static const String studentHome = '/student/home';
   static const String studentMap = '/student/map';
   static const String studentProgress = '/student/progress';
@@ -84,7 +88,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
       final done = placement.value ?? false;
+      // Halaman hasil boleh dibuka agar bisa dilihat tepat setelah tes.
+      if (location == AppRoutes.placementResult) return null;
       if (location == AppRoutes.placement) {
+        return done ? AppRoutes.studentHome : null;
+      }
+      // Layar tes hanya selama placement belum tuntas (tidak bisa diulang).
+      if (location == AppRoutes.placementTest) {
         return done ? AppRoutes.studentHome : null;
       }
       if (location.startsWith('/student')) {
@@ -121,6 +131,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.placement,
         name: 'placement',
         builder: (context, state) => const PlacementScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.placementTest,
+        name: 'placement-test',
+        builder: (context, state) => const PlacementTestScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.placementResult,
+        name: 'placement-result',
+        builder: (context, state) => const PlacementResultScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

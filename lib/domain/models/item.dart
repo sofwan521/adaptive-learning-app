@@ -17,6 +17,9 @@ class Item extends Equatable {
   final double a;
   final double b;
 
+  /// Pembahasan singkat yang ditampilkan setelah menjawab.
+  final String explanation;
+
   const Item({
     required this.id,
     required this.conceptId,
@@ -25,6 +28,7 @@ class Item extends Equatable {
     required this.correctIndex,
     this.a = 1.0,
     this.b = 0.0,
+    this.explanation = '',
   });
 
   Item copyWith({
@@ -35,6 +39,7 @@ class Item extends Equatable {
     int? correctIndex,
     double? a,
     double? b,
+    String? explanation,
   }) {
     return Item(
       id: id ?? this.id,
@@ -44,6 +49,7 @@ class Item extends Equatable {
       correctIndex: correctIndex ?? this.correctIndex,
       a: a ?? this.a,
       b: b ?? this.b,
+      explanation: explanation ?? this.explanation,
     );
   }
 
@@ -59,6 +65,7 @@ class Item extends Equatable {
       correctIndex: json['correctIndex'] as int? ?? 0,
       a: (json['a'] as num? ?? 1.0).toDouble(),
       b: (json['b'] as num? ?? 0.0).toDouble(),
+      explanation: json['explanation'] as String? ?? '',
     );
   }
 
@@ -71,10 +78,11 @@ class Item extends Equatable {
       'correctIndex': correctIndex,
       'a': a,
       'b': b,
+      'explanation': explanation,
     };
   }
 
   @override
   List<Object?> get props =>
-      [id, conceptId, question, options, correctIndex, a, b];
+      [id, conceptId, question, options, correctIndex, a, b, explanation];
 }
