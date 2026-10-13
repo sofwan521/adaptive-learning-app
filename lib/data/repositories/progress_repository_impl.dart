@@ -203,6 +203,24 @@ class SupabaseProgressRepository implements ProgressRepository {
   }
 
   @override
+  Future<int> countResponsesToday() async {
+    try {
+      final userId = _userId();
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final rows = await _client
+          .from('responses')
+          .select('id')
+          .eq('student_id', userId)
+          .gte('answered_at', startOfDay.toIso8601String())
+          .limit(1000);
+      return (rows as List).length;
+    } catch (e) {
+      throw mapToAppException(e);
+    }
+  }
+
+  @override
   Future<String> createSession({String? conceptId}) async {
     try {
       final userId = _userId();

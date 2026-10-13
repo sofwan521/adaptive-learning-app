@@ -16,4 +16,7 @@ abstract final class AppConstants {
   static const double eapMin = -4.0;
   static const double eapMax = 4.0;
   static const double eapStep = 0.1;
+
+  /// Target harian jumlah soal yang dikerjakan siswa.
+  static const int dailyQuestionTarget = 5;
 }

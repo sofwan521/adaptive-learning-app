@@ -30,6 +30,9 @@ abstract class ProgressRepository {
   /// Jumlah respons yang masih antre.
   Future<int> pendingCount();
 
+  /// Jumlah soal yang dijawab hari ini (zona waktu perangkat).
+  Future<int> countResponsesToday();
+
   /// Mulai sesi kuis, mengembalikan id sesi.
   Future<String> createSession({String? conceptId});
 

@@ -9,8 +9,13 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/dev/presentation/gallery_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/learning/presentation/quiz_screen.dart';
 import '../../features/placement/presentation/placement_screen.dart';
 import '../../features/student/presentation/student_home_screen.dart';
+import '../../features/student/presentation/student_map_screen.dart';
+import '../../features/student/presentation/student_profile_screen.dart';
+import '../../features/student/presentation/student_progress_screen.dart';
+import '../../features/student/presentation/student_shell.dart';
 import '../../features/teacher/presentation/teacher_classes_screen.dart';
 
 /// Rute bersama AdaptiLearn.
@@ -21,8 +26,14 @@ abstract final class AppRoutes {
   static const String home = '/';
   static const String placement = '/placement';
   static const String studentHome = '/student/home';
+  static const String studentMap = '/student/map';
+  static const String studentProgress = '/student/progress';
+  static const String studentProfile = '/student/profile';
   static const String teacherClasses = '/teacher/classes';
   static const String gallery = '/dev/gallery';
+
+  /// Rute kuis satu konsep.
+  static String studentQuiz(String conceptId) => '/student/quiz/$conceptId';
 }
 
 /// Rute publik yang boleh dibuka tanpa sesi.
@@ -111,10 +122,57 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'placement',
         builder: (context, state) => const PlacementScreen(),
       ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            StudentShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentHome,
+                name: 'student-home',
+                builder: (context, state) => const StudentHomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentMap,
+                name: 'student-map',
+                builder: (context, state) => const StudentMapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentProgress,
+                name: 'student-progress',
+                builder: (context, state) =>
+                    const StudentProgressScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentProfile,
+                name: 'student-profile',
+                builder: (context, state) =>
+                    const StudentProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
       GoRoute(
-        path: AppRoutes.studentHome,
-        name: 'student-home',
-        builder: (context, state) => const StudentHomeScreen(),
+        path: '/student/quiz/:conceptId',
+        name: 'student-quiz',
+        builder: (context, state) {
+          final conceptId = state.pathParameters['conceptId']!;
+          return QuizScreen(conceptId: conceptId);
+        },
       ),
       GoRoute(
         path: AppRoutes.teacherClasses,

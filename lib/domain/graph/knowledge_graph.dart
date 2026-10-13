@@ -110,6 +110,9 @@ class KnowledgeGraph {
   /// Semua id konsep dalam graf.
   Set<String> get conceptIds => Set.of(_concepts.keys);
 
+  /// Konsep ber-id [id]. Melempar [ArgumentError] bila tak dikenal.
+  Concept concept(String id) => _concepts[_require(id)]!;
+
   String _require(String id) {
     if (!_concepts.containsKey(id)) {
       throw ArgumentError('Konsep tak dikenal: $id.');
