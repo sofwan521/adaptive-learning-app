@@ -160,6 +160,10 @@ void main() {
           find.byKey(const Key('register-password')), 'sandi123');
       await tester.enterText(
           find.byKey(const Key('register-confirm')), 'sandi123');
+      await tester.ensureVisible(
+        find.byKey(const Key('register-submit')),
+      );
+      await _pumpFrames(tester, 5);
       await tester.tap(find.byKey(const Key('register-submit')));
       await _pumpFrames(tester, 15);
 

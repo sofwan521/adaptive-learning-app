@@ -91,11 +91,16 @@ flutter pub get
 # Check devices
 flutter devices
 
-# Run aplikasi
-flutter run
+# Run aplikasi (wajib sertakan kredensial Supabase — tanpa ini
+# aplikasi tidak terhubung backend dan terpental ke halaman login)
+flutter run \
+  --dart-define=SUPABASE_URL=https://xyzcompany.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=isi-anon-key-di-sini
 
 # Atau dalam release mode (lebih cepat)
-flutter run --release
+flutter run --release \
+  --dart-define=SUPABASE_URL=https://xyzcompany.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=isi-anon-key-di-sini
 ```
 
 ---

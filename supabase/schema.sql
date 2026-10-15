@@ -6,24 +6,6 @@
 
 create extension if not exists "pgcrypto";
 
--- ---------------------------------------------------------------------
--- Fungsi pembantu: apakah pengguna login adalah admin?
--- (Dipakai trigger + kebijakan RLS. Didefinisikan di sini agar trigger
--- pendaftaran bisa memakainya.)
--- ---------------------------------------------------------------------
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
-
 -- =====================================================================
 -- 1. PROFILES — satu baris per pengguna auth
 -- =====================================================================
@@ -213,8 +195,28 @@ create index if not exists concept_state_concept_idx on public.student_concept_s
 create index if not exists user_badges_badge_idx on public.user_badges (badge_id);
 
 -- =====================================================================
--- Trigger updated_at otomatis
+-- Fungsi pembantu + trigger.
+-- Urutan: tabel -> indeks (di atas) -> fungsi -> trigger.
+-- public.is_admin() WAJIB setelah CREATE TABLE public.profiles agar tidak
+-- error 42P01 "relation public.profiles does not exist" (fungsi SQL
+-- divalidasi saat CREATE, jadi tabel yang dibaca harus sudah ada).
 -- =====================================================================
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- ---------------------------------------------------------------------
+-- Trigger updated_at otomatis
+-- ---------------------------------------------------------------------
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

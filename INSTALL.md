@@ -44,10 +44,16 @@ Tunggu sampai semua package terdownload (bisa 1-3 menit tergantung koneksi).
 2. Klik tombol **Run** (▶️) hijau di toolbar
 3. Atau tekan **Shift + F10**
 
-**Cara 2 - Via Terminal:**
+**Cara 2 - Via Terminal (wajib sertakan kredensial Supabase):**
 ```bash
-flutter run
+flutter run \
+  --dart-define=SUPABASE_URL=https://xyzcompany.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=isi-anon-key-di-sini
 ```
+
+> Tanpa `--dart-define`, aplikasi tidak terhubung ke backend dan akan
+> terpental ke halaman login (ada spanduk peringatan di layar Masuk).
+> Ambil nilainya dari dashboard Supabase → *Project Settings → Data API*.
 
 ### 5. Login ke Aplikasi
 

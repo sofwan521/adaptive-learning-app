@@ -84,7 +84,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+                  const BackendWarning(),
+                  const SizedBox(height: 16),
                   TextFormField(
                     key: const Key('login-email'),
                     controller: _emailController,

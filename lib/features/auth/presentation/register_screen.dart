@@ -81,7 +81,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     textAlign: TextAlign.center,
                     style: textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+                  const BackendWarning(),
+                  const SizedBox(height: 12),
                   Text('Saya mendaftar sebagai:', style: textTheme.bodyMedium),
                   const SizedBox(height: 8),
                   SegmentedButton<UserRole>(
