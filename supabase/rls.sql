@@ -36,6 +36,57 @@ revoke all on all tables in schema public from anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
 
+-- ---------------------------------------------------------------------
+-- 2b. Fungsi pembantu SECURITY DEFINER (bypass RLS).
+-- WAJIB agar policy yang join classes+class_members tidak rekursi
+-- (error 42P17 "infinite recursion detected in policy").
+-- ---------------------------------------------------------------------
+create or replace function public.is_class_teacher(p_class_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.classes
+    where id = p_class_id and teacher_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_class_member(p_class_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.class_members
+    where class_id = p_class_id and student_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_teacher_of(p_student_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.classes c
+    join public.class_members m on m.class_id = c.id
+    where c.teacher_id = auth.uid()
+      and m.student_id = p_student_id
+  );
+$$;
+
+grant execute on function public.is_class_teacher(uuid) to authenticated;
+grant execute on function public.is_class_member(uuid) to authenticated;
+grant execute on function public.is_teacher_of(uuid) to authenticated;
+
 -- =====================================================================
 -- 3. PROFILES
 -- =====================================================================
@@ -47,13 +98,7 @@ create policy "Profil: baca milik sendiri"
 drop policy if exists "Profil: guru baca murid di kelasnya" on public.profiles;
 create policy "Profil: guru baca murid di kelasnya"
   on public.profiles for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid() and m.student_id = profiles.id
-    )
-  );
+  using (public.is_teacher_of(profiles.id));
 
 drop policy if exists "Profil: buat baris sendiri" on public.profiles;
 create policy "Profil: buat baris sendiri"
@@ -83,12 +128,7 @@ create policy "Kelas: guru baca kelasnya"
 drop policy if exists "Kelas: siswa baca kelas yang diikuti" on public.classes;
 create policy "Kelas: siswa baca kelas yang diikuti"
   on public.classes for select to authenticated
-  using (
-    exists (
-      select 1 from public.class_members
-      where class_id = classes.id and student_id = auth.uid()
-    )
-  );
+  using (public.is_class_member(classes.id));
 
 drop policy if exists "Kelas: guru buat kelas sendiri" on public.classes;
 create policy "Kelas: guru buat kelas sendiri"
@@ -123,12 +163,7 @@ create policy "Anggota: baca keanggotaan sendiri"
 drop policy if exists "Anggota: guru baca anggota kelasnya" on public.class_members;
 create policy "Anggota: guru baca anggota kelasnya"
   on public.class_members for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes
-      where id = class_members.class_id and teacher_id = auth.uid()
-    )
-  );
+  using (public.is_class_teacher(class_members.class_id));
 
 drop policy if exists "Anggota: gabung sendiri" on public.class_members;
 create policy "Anggota: gabung sendiri"
@@ -138,12 +173,7 @@ create policy "Anggota: gabung sendiri"
 drop policy if exists "Anggota: guru tambah murid ke kelasnya" on public.class_members;
 create policy "Anggota: guru tambah murid ke kelasnya"
   on public.class_members for insert to authenticated
-  with check (
-    exists (
-      select 1 from public.classes
-      where id = class_members.class_id and teacher_id = auth.uid()
-    )
-  );
+  with check (public.is_class_teacher(class_members.class_id));
 
 drop policy if exists "Anggota: keluar sendiri" on public.class_members;
 create policy "Anggota: keluar sendiri"
@@ -153,12 +183,7 @@ create policy "Anggota: keluar sendiri"
 drop policy if exists "Anggota: guru keluarkan murid" on public.class_members;
 create policy "Anggota: guru keluarkan murid"
   on public.class_members for delete to authenticated
-  using (
-    exists (
-      select 1 from public.classes
-      where id = class_members.class_id and teacher_id = auth.uid()
-    )
-  );
+  using (public.is_class_teacher(class_members.class_id));
 
 drop policy if exists "Anggota: admin kelola semua" on public.class_members;
 create policy "Anggota: admin kelola semua"
@@ -242,14 +267,7 @@ create policy "Sesi: siswa perbarui sesinya"
 drop policy if exists "Sesi: guru baca sesi muridnya" on public.quiz_sessions;
 create policy "Sesi: guru baca sesi muridnya"
   on public.quiz_sessions for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = quiz_sessions.student_id
-    )
-  );
+  using (public.is_teacher_of(quiz_sessions.student_id));
 
 drop policy if exists "Sesi: admin kelola semua" on public.quiz_sessions;
 create policy "Sesi: admin kelola semua"
@@ -273,14 +291,7 @@ create policy "Jawaban: siswa kirim jawaban"
 drop policy if exists "Jawaban: guru baca jawaban muridnya" on public.responses;
 create policy "Jawaban: guru baca jawaban muridnya"
   on public.responses for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = responses.student_id
-    )
-  );
+  using (public.is_teacher_of(responses.student_id));
 
 drop policy if exists "Jawaban: admin kelola semua" on public.responses;
 create policy "Jawaban: admin kelola semua"
@@ -310,14 +321,7 @@ create policy "Kemampuan: siswa perbarui miliknya"
 drop policy if exists "Kemampuan: guru baca muridnya" on public.student_ability;
 create policy "Kemampuan: guru baca muridnya"
   on public.student_ability for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = student_ability.student_id
-    )
-  );
+  using (public.is_teacher_of(student_ability.student_id));
 
 drop policy if exists "Kemampuan: admin kelola semua" on public.student_ability;
 create policy "Kemampuan: admin kelola semua"
@@ -347,14 +351,7 @@ create policy "State: siswa perbarui miliknya"
 drop policy if exists "State: guru baca muridnya" on public.student_concept_state;
 create policy "State: guru baca muridnya"
   on public.student_concept_state for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = student_concept_state.student_id
-    )
-  );
+  using (public.is_teacher_of(student_concept_state.student_id));
 
 drop policy if exists "State: admin kelola semua" on public.student_concept_state;
 create policy "State: admin kelola semua"
@@ -384,14 +381,7 @@ create policy "Gamifikasi: siswa perbarui miliknya"
 drop policy if exists "Gamifikasi: guru baca muridnya" on public.gamification;
 create policy "Gamifikasi: guru baca muridnya"
   on public.gamification for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = gamification.student_id
-    )
-  );
+  using (public.is_teacher_of(gamification.student_id));
 
 drop policy if exists "Gamifikasi: admin kelola semua" on public.gamification;
 create policy "Gamifikasi: admin kelola semua"
@@ -428,14 +418,7 @@ create policy "LencanaKu: simpan milik sendiri"
 drop policy if exists "LencanaKu: guru baca muridnya" on public.user_badges;
 create policy "LencanaKu: guru baca muridnya"
   on public.user_badges for select to authenticated
-  using (
-    exists (
-      select 1 from public.classes c
-      join public.class_members m on m.class_id = c.id
-      where c.teacher_id = auth.uid()
-        and m.student_id = user_badges.user_id
-    )
-  );
+  using (public.is_teacher_of(user_badges.user_id));
 
 drop policy if exists "LencanaKu: admin kelola semua" on public.user_badges;
 create policy "LencanaKu: admin kelola semua"
