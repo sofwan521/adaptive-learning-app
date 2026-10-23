@@ -1,4 +1,4 @@
-# AdaptiLearn
+# AdaptifLearn
 
 Aplikasi mobile pembelajaran adaptif untuk siswa SMP/SMA (Matematika dasar)
 yang menyesuaikan tingkat kesulitan soal dengan kemampuan tiap siswa.
