@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:adaptive_learning_app/core/theme/app_theme.dart';
 import 'package:adaptive_learning_app/data/datasources/quiz_resume_store.dart';
 import 'package:adaptive_learning_app/data/datasources/reminder_store.dart';
 import 'package:adaptive_learning_app/data/repositories/auth_repository_impl.dart';
@@ -11,6 +12,7 @@ import 'package:adaptive_learning_app/data/repositories/gamification_repository_
 import 'package:adaptive_learning_app/data/repositories/item_repository_impl.dart';
 import 'package:adaptive_learning_app/data/repositories/progress_repository_impl.dart';
 import 'package:adaptive_learning_app/data/repositories/teacher_repository_impl.dart';
+import 'package:adaptive_learning_app/domain/gamification/badges.dart';
 import 'package:adaptive_learning_app/domain/models/class_info.dart';
 import 'package:adaptive_learning_app/domain/models/item.dart';
 import 'package:adaptive_learning_app/domain/models/quiz_session.dart';
@@ -156,7 +158,7 @@ class _FakeScheduler implements NotificationScheduler {
   Future<void> cancelDailyReminder() async {}
 }
 
-ProviderContainer _container() {
+ProviderContainer _container({Set<String>? badgeCodes}) {
   final now = DateTime.now();
   return ProviderContainer.test(
     overrides: [
@@ -195,7 +197,8 @@ ProviderContainer _container() {
         ),
       ),
       gamificationRepositoryProvider.overrideWithValue(
-        FakeGamificationRepository(),
+        FakeGamificationRepository()
+          ..badgeCodes.addAll(badgeCodes ?? const <String>{}),
       ),
       itemRepositoryProvider.overrideWithValue(_SmallItemRepository()),
       quizResumeStoreProvider.overrideWithValue(_MemoryResumeStore()),
@@ -209,8 +212,11 @@ ProviderContainer _container() {
 
 Future<void> _pumpNarrow(
   WidgetTester tester,
-  Widget screen,
-) async {
+  Widget screen, {
+  double textScale = 1.0,
+  ThemeData? theme,
+  Set<String>? badgeCodes,
+}) async {
   tester.view.physicalSize = const Size(360, 740);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
@@ -218,8 +224,17 @@ Future<void> _pumpNarrow(
 
   await tester.pumpWidget(
     UncontrolledProviderScope(
-      container: _container(),
-      child: MaterialApp(home: screen),
+      container: _container(badgeCodes: badgeCodes),
+      child: MaterialApp(
+        theme: theme,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: child!,
+        ),
+        home: screen,
+      ),
     ),
   );
   await tester.pump();
@@ -299,6 +314,24 @@ void main() {
       await _pumpNarrow(tester, const StudentProfileScreen());
 
       expect(find.text('Siswa Uji'), findsOneWidget);
+      await _scrollAll(tester);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('profil dengan text scale 1.3', (tester) async {
+      await _pumpNarrow(
+        tester,
+        const StudentProfileScreen(),
+        theme: AppTheme.light(),
+        textScale: 1.3,
+        badgeCodes: {for (final badge in kAppBadges) badge.code},
+      );
+
+      expect(find.text('Konsep Pertama Dikuasai'), findsOneWidget);
+      expect(
+        find.text('Menguasai konsep lewat jalur remedial.'),
+        findsOneWidget,
+      );
       await _scrollAll(tester);
       expect(tester.takeException(), isNull);
     });
