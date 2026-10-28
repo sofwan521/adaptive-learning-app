@@ -44,6 +44,23 @@ Perbaikan lintas langkah yang dicatat saat pengembangan:
   <konsep>`) diubah ke Wrap/tata vertikal; grid lencana diberi tinggi
   cukup (temuan audit 360 dp).
 
+## Tahap 4 (29 Okt 2026)
+
+Penguatan pengujian dan kesiapan rilis.
+
+- `98b115c` refactor(score): hapus XP/level dan tampilkan skor persen;
+  theta tetap dipakai internal untuk IRT dan aturan berhenti.
+- `c1725c3` fix(navigation): tampilkan hasil placement sebelum ke
+  beranda; router tidak lagi dibangun ulang saat status placement
+  berubah.
+- Menambah uji integrasi alur siswa dan perluasan 360 dp untuk
+  empty/error, hasil kuis, placement, detail kelas, dan detail siswa.
+- `flutter analyze` bersih; `flutter test` 249/249 lulus; APK rilis
+  terbentuk (57,3 MB) dengan peringatan font CupertinoIcons yang dicatat
+  di `docs/test-report.md`.
+- Dokumen baru: `docs/test-plan.md`, `docs/bug-list.md`,
+  `docs/fix-log.md`, `docs/user-testing-form.md`.
+
 ## Berikutnya (di luar MVP)
 
 - KF-15 panel admin bank soal di aplikasi.

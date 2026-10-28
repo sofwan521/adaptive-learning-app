@@ -26,15 +26,15 @@ Kelompok 2 — UIN Maulana Malik Ibrahim Malang (2026).
   (zoom/geser), tata letak berlapis, ketuk node untuk detail, legenda.
 - **Remedial**: kartu `Akar masalah: <konsep>` + jalur berurutan dengan
   tombol `Ulangi <konsep>`; lulus remedial menawarkan kembali ke konsep awal.
-- **Gamifikasi**: XP (benar +10, lulus +50, konsep baru +100),
-  level `floor(sqrt(xp/100))+1`, streak harian, 4 lencana, animasi naik level.
+- **Gamifikasi**: streak harian dan 4 lencana; tanpa XP/level, skor
+  kemampuan ditampilkan sebagai persen.
 - **Pengingat**: notifikasi harian pada jam pilihan (izin Android 13+
   ditangani) + rekomendasi konsep Terbuka sekali sehari.
-- **Dasbor progres**: grafik garis θ (fl_chart), ringkasan angka, bar
-  penguasaan per konsep, riwayat kuis dengan tarik-segarkan.
+- **Dasbor progres**: grafik skor kemampuan persen (fl_chart), ringkasan
+  angka, bar penguasaan per konsep, riwayat kuis dengan tarik-segarkan.
 - **Kelas guru**: buat kelas (kode 6 karakter otomatis), daftar siswa
-  (θ, dikuasai, terakhir aktif), konsep paling sering gagal, detail siswa;
-  siswa bergabung via kode di Profil (RPC `join_class`).
+  (skor persen, dikuasai, terakhir aktif), konsep paling sering gagal,
+  detail siswa; siswa bergabung via kode di Profil (RPC `join_class`).
 - **Tahan luring**: respons masuk antrean lokal dan disinkronkan saat
   koneksi pulih.
 
@@ -48,7 +48,7 @@ lib/
 ├── domain/                  LOGIKA MURNI tanpa import Flutter
 │   ├── irt/                 peluang 2PL, informasi Fisher, EAP, aturan sesi
 │   ├── graph/               knowledge graph, status, remedial
-│   ├── gamification/        aturan XP/level/streak, katalog lencana
+│   ├── gamification/        aturan streak, katalog lencana
 │   ├── models/              entitas immutable (tanpa code generation)
 │   └── repositories/        kontrak repository
 ├── data/                    implementasi Supabase + SharedPreferences
@@ -107,11 +107,13 @@ penyimpanan lokal (`.env` sudah di-gitignore).
 
 ```bash
 flutter analyze   # harus bersih
-flutter test      # 229 tes: unit domain + controller + widget
+flutter test      # 249 tes: unit domain + controller + widget + integrasi
 ```
 
-Ringkasan hasil ada di `docs/test-report.md`, log pengembangan di
-`docs/progress.md`, riwayat rilis di `CHANGELOG.md`.
+Rencana uji ada di `docs/test-plan.md`, hasil di `docs/test-report.md`,
+temuan di `docs/bug-list.md`, perbaikan di `docs/fix-log.md`, formulir
+user testing di `docs/user-testing-form.md`, dan log pengembangan di
+`docs/progress.md`.
 
 ## Status kebutuhan fungsional (KF-01..KF-15)
 
@@ -125,9 +127,9 @@ Ringkasan hasil ada di `docs/test-report.md`, log pengembangan di
 | KF-06 | Peta konsep interaktif (zoom, geser, ketuk) | Selesai |
 | KF-07 | Materi pembelajaran per konsep | Selesai |
 | KF-08 | Jalur remedial + kembali ke konsep awal | Selesai |
-| KF-09 | Gamifikasi (XP, level, streak, lencana) | Selesai |
+| KF-09 | Gamifikasi (streak, lencana) | Selesai |
 | KF-10 | Pengingat harian + rekomendasi konsep Terbuka | Selesai |
-| KF-11 | Dasbor progres (grafik θ, ringkasan, riwayat) | Selesai |
+| KF-11 | Dasbor progres (grafik skor %, ringkasan, riwayat) | Selesai |
 | KF-12 | Kelas guru: buat, daftar siswa, konsep gagal | Selesai |
 | KF-13 | Gabung kelas via kode 6 karakter + validasi | Selesai |
 | KF-14 | Antrean luring + lanjutkan sesi terputus | Selesai |
