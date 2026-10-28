@@ -10,9 +10,9 @@ import '../../../data/repositories/progress_repository_impl.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../student/application/student_providers.dart';
 import '../../../domain/gamification/badges.dart';
-import '../../../domain/gamification/gamification_rules.dart';
 import '../../../domain/graph/knowledge_graph.dart';
 import '../../../domain/irt/irt_engine.dart';
+import '../../../domain/irt/score_scale.dart';
 import '../../../domain/models/ability_estimate.dart';
 import '../../../domain/models/concept_status.dart';
 import '../../../domain/models/gamification_state.dart';
@@ -20,7 +20,6 @@ import '../../../domain/models/item.dart';
 import '../../../domain/models/pending_response.dart';
 import '../../../domain/models/response_record.dart';
 import '../../../domain/models/student_concept_state.dart';
-import '../../../domain/repositories/gamification_repository.dart';
 
 /// Batas waktu komputasi adaptif per langkah (mikrodetik).
 ///
@@ -88,13 +87,6 @@ class QuizState extends Equatable {
 
   final SessionDecision? decision;
   final List<String> newlyUnlockedIds;
-  final int xpEarned;
-
-  /// Total XP siswa setelah bonus sesi ditambahkan.
-  final int xpTotal;
-
-  /// True bila bonus sesi menaikkan level.
-  final bool leveledUp;
 
   /// Kode lencana yang baru diperoleh pada sesi ini.
   final List<String> newBadges;
@@ -136,9 +128,6 @@ class QuizState extends Equatable {
     this.errorMessage,
     this.decision,
     this.newlyUnlockedIds = const [],
-    this.xpEarned = 0,
-    this.xpTotal = 0,
-    this.leveledUp = false,
     this.newBadges = const [],
     this.remedialPlan,
     this.pendingResume,
@@ -152,6 +141,9 @@ class QuizState extends Equatable {
 
   /// Jumlah soal yang dijawab sesi ini.
   int get nAnswered => answeredItems.length;
+
+  /// Skor kemampuan konsep dalam persen (0..100).
+  double get conceptScorePercent => thetaToPercent(thetaConcept);
 
   /// Nomor soal berjalan (1-based) untuk tampilan.
   int get questionNumber {
@@ -208,9 +200,6 @@ class QuizState extends Equatable {
     bool clearError = false,
     SessionDecision? decision,
     List<String>? newlyUnlockedIds,
-    int? xpEarned,
-    int? xpTotal,
-    bool? leveledUp,
     List<String>? newBadges,
     RemedialPlan? remedialPlan,
     QuizResumeSnapshot? pendingResume,
@@ -248,9 +237,6 @@ class QuizState extends Equatable {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       decision: decision ?? this.decision,
       newlyUnlockedIds: newlyUnlockedIds ?? this.newlyUnlockedIds,
-      xpEarned: xpEarned ?? this.xpEarned,
-      xpTotal: xpTotal ?? this.xpTotal,
-      leveledUp: leveledUp ?? this.leveledUp,
       newBadges: newBadges ?? this.newBadges,
       remedialPlan: remedialPlan ?? this.remedialPlan,
       pendingResume:
@@ -289,9 +275,6 @@ class QuizState extends Equatable {
         errorMessage,
         decision,
         newlyUnlockedIds,
-        xpEarned,
-        xpTotal,
-        leveledUp,
         newBadges,
         remedialPlan,
         pendingResume,
@@ -305,7 +288,7 @@ class QuizState extends Equatable {
 /// Alur: muat soal (theta awal = theta global) -> pilih soal via
 /// [selectNextItem] -> jawab, simpan respons, perbarui theta global
 /// dan theta konsep -> [evaluateSession] -> lanjut / mastered
-/// (status, newlyUnlocked, XP) / failed (status learning +
+/// (status, newlyUnlocked) / failed (status learning +
 /// RemedialPlan) -> tutup sesi dan simpan semua state.
 ///
 /// Respons dan theta disimpan setiap soal sehingga progres tidak
@@ -744,7 +727,7 @@ class QuizController extends Notifier<QuizState> {
     );
   }
 
-  /// Finalisasi: simpan status, XP/remedial, tutup sesi.
+  /// Finalisasi: simpan status, remedial, tutup sesi.
   Future<void> _finishTerminal({
     required List<ResponseRecord> rebuiltRecords,
     required List<Item> answeredItems,
@@ -781,9 +764,6 @@ class QuizController extends Notifier<QuizState> {
       final nAnswered = state.baselineAnswered + answeredItems.length;
 
       List<String> newlyUnlockedIds = const [];
-      int xpEarned = 0;
-      int xpTotal = 0;
-      bool leveledUp = false;
       final newBadges = <String>[];
       RemedialPlan? plan;
 
@@ -796,8 +776,6 @@ class QuizController extends Notifier<QuizState> {
       }
 
       if (decision == SessionDecision.mastered) {
-        final wasMastered =
-            statesById[state.conceptId]?.status == ConceptStatus.mastered;
         await progress.upsertConceptState(
           StudentConceptState(
             studentId: studentId,
@@ -812,12 +790,6 @@ class QuizController extends Notifier<QuizState> {
         final order = graph.topologicalOrder();
         newlyUnlockedIds = unlocked.toList()
           ..sort((a, b) => order.indexOf(a).compareTo(order.indexOf(b)));
-        var bonus = correctCount * xpPerCorrectAnswer + xpPerSessionPass;
-        if (!wasMastered) bonus += xpPerNewMastery;
-        final settled = await _settleXp(gamification, bonus);
-        xpEarned = settled.earned;
-        xpTotal = settled.total;
-        leveledUp = settled.leveledUp;
         await awardBadgeIfNew(badgeFirstMastery.code);
         if (state.originConceptId != null) {
           await awardBadgeIfNew(badgeRemedialHero.code);
@@ -843,13 +815,6 @@ class QuizController extends Notifier<QuizState> {
           ),
         });
         plan = graph.buildRemedialPlan(state.conceptId, statusesAfter);
-        final settled = await _settleXp(
-          gamification,
-          correctCount * xpPerCorrectAnswer,
-        );
-        xpEarned = settled.earned;
-        xpTotal = settled.total;
-        leveledUp = settled.leveledUp;
       }
 
       GamificationState? streakState;
@@ -890,9 +855,6 @@ class QuizController extends Notifier<QuizState> {
         consecutiveWrong: consecutiveWrong,
         decision: decision,
         newlyUnlockedIds: newlyUnlockedIds,
-        xpEarned: xpEarned,
-        xpTotal: xpTotal,
-        leveledUp: leveledUp,
         newBadges: newBadges,
         remedialPlan: plan,
         clearResume: true,
@@ -908,32 +870,6 @@ class QuizController extends Notifier<QuizState> {
         phase: QuizPhase.error,
         errorMessage: 'Terjadi kesalahan. Silakan coba lagi.',
       );
-    }
-  }
-
-  /// Beri bonus XP sesi dan laporkan hasilnya (best-effort).
-  ///
-  /// Mengembalikan perolehan bersih, total XP, dan apakah level naik.
-  /// Bila penyimpanan gagal, ketiganya nol/palsu agar hasil sesi
-  /// tetap tersimpan.
-  Future<({int earned, int total, bool leveledUp})> _settleXp(
-    GamificationRepository gamification,
-    int bonus,
-  ) async {
-    try {
-      final before = await gamification.load();
-      if (bonus <= 0) {
-        return (earned: 0, total: before.xp, leveledUp: false);
-      }
-      final after = await gamification.addXp(bonus);
-      final gained = after.xp - before.xp;
-      return (
-        earned: gained < 0 ? 0 : gained,
-        total: after.xp,
-        leveledUp: xpToLevel(before.xp) < xpToLevel(after.xp),
-      );
-    } catch (_) {
-      return (earned: 0, total: 0, leveledUp: false);
     }
   }
 

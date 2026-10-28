@@ -128,30 +128,14 @@ class RecordingProgressRepository implements ProgressRepository {
 class RecordingGamificationRepository implements GamificationRepository {
   GamificationState state = const GamificationState(
     studentId: 'siswa-1',
-    xp: 120,
-    level: 2,
     streak: 4,
   );
-  int addXpCalls = 0;
   int streakCalls = 0;
   final Set<String> badgeCodes = {};
   final List<String> awardedOrder = [];
 
   @override
   Future<GamificationState> load() async => state;
-
-  @override
-  Future<GamificationState> addXp(int xp) async {
-    addXpCalls++;
-    state = GamificationState(
-      studentId: state.studentId,
-      xp: state.xp + xp,
-      level: (state.xp + xp) ~/ 100 + 1,
-      streak: state.streak,
-      lastActiveDate: state.lastActiveDate,
-    );
-    return state;
-  }
 
   @override
   Future<GamificationState> updateStreak() async {
@@ -351,7 +335,7 @@ void main() {
   });
 
   group('QuizController lulus', () {
-    test('8 benar tuntas mastered + XP + konsep terbuka', () async {
+    test('8 benar tuntas mastered + konsep terbuka', () async {
       final progress = RecordingProgressRepository()
         ..states['K01'] = masteredState('K01');
       final gamification = RecordingGamificationRepository();
@@ -375,12 +359,10 @@ void main() {
       expect(progress.states['K02']?.nAnswered, 8);
       // K03 terbuka karena K01 dan K02 kini mastered.
       expect(state.newlyUnlockedIds, contains('K03'));
-      // XP diberikan dan sesi ditutup; potret dibersihkan.
-      // 8 benar (80) + lulus (50) + konsep baru (100) = 230.
-      expect(gamification.addXpCalls, 1);
-      expect(state.xpEarned, 230);
-      expect(state.xpTotal, 120 + 230);
-      expect(state.leveledUp, isFalse);
+      // Streak diperbarui dan potret dibersihkan.
+      expect(gamification.streakCalls, 1);
+      expect(state.conceptScorePercent, greaterThan(50));
+      expect(state.conceptScorePercent, lessThanOrEqualTo(100));
       // Lencana langkah pertama dan konsep pertama diperoleh.
       expect(state.newBadges, contains('langkah-pertama'));
       expect(state.newBadges, contains('konsep-pertama'));
@@ -393,20 +375,10 @@ void main() {
       expect(progress.savedResponses, hasLength(8));
     });
 
-    test('bonus besar menaikkan level', () async {
+    test('skor konsep akhir berupa persen valid', () async {
       final progress = RecordingProgressRepository()
         ..states['K01'] = masteredState('K01');
-      final gamification = RecordingGamificationRepository()
-        ..state = const GamificationState(
-          studentId: 'siswa-1',
-          xp: 390,
-          level: 2,
-          streak: 4,
-        );
-      final container = _container(
-        progress: progress,
-        gamification: gamification,
-      );
+      final container = _container(progress: progress);
       final controller = container.read(quizControllerProvider.notifier);
 
       await controller.start('K02');
@@ -416,9 +388,7 @@ void main() {
       final state = container.read(quizControllerProvider);
 
       expect(state.decision, SessionDecision.mastered);
-      expect(state.xpEarned, 230);
-      expect(state.xpTotal, 620);
-      expect(state.leveledUp, isTrue);
+      expect(state.conceptScorePercent, inInclusiveRange(0, 100));
     });
 
     test('lulus remedial memberi lencana pahlawan remedial', () async {
@@ -461,8 +431,6 @@ void main() {
       expect(state.phase, QuizPhase.done);
       expect(state.decision, SessionDecision.failed);
       expect(progress.states['K02']?.status, ConceptStatus.learning);
-      expect(gamification.addXpCalls, 0);
-      expect(state.xpEarned, 0);
       // Akar masalah K01 (satu-satunya prasyarat lemah K02).
       final plan = state.remedialPlan!;
       expect(plan.orderedPath.last, 'K02');
@@ -473,7 +441,7 @@ void main() {
       expect(state.newBadges, contains('langkah-pertama'));
     });
 
-    test('gagal dengan jawaban benar tetap memberi XP jawaban', () async {
+    test('gagal dengan jawaban benar tetap mencatat jawaban', () async {
       final progress = RecordingProgressRepository();
       final gamification = RecordingGamificationRepository();
       final container = _container(
@@ -492,10 +460,8 @@ void main() {
 
       expect(state.phase, QuizPhase.done);
       expect(state.decision, SessionDecision.failed);
-      // 2 benar (20), tanpa bonus lulus/penguasaan.
-      expect(gamification.addXpCalls, 1);
-      expect(state.xpEarned, 20);
-      expect(state.leveledUp, isFalse);
+      expect(state.correctCount, 2);
+      expect(progress.savedResponses, hasLength(5));
     });
   });
 

@@ -64,7 +64,7 @@ final continueConceptProvider = FutureProvider<Concept?>((ref) async {
   return lastLearning ?? firstOpen;
 });
 
-/// Status gamifikasi (XP dan streak) siswa aktif.
+/// Status gamifikasi (streak harian) siswa aktif.
 final gamificationProvider = FutureProvider<GamificationState>((ref) {
   return ref.watch(gamificationRepositoryProvider).load();
 });

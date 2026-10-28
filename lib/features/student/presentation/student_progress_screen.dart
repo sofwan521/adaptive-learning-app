@@ -9,7 +9,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../domain/models/concept_status.dart';
 import '../../progress/application/progress_dashboard.dart';
 
-/// Dasbor progres siswa: ringkasan angka, grafik theta (fl_chart),
+/// Dasbor progres siswa: ringkasan angka, grafik skor persen (fl_chart),
 /// bar penguasaan per konsep, dan riwayat kuis yang bisa disegarkan.
 ///
 /// Siswa baru tanpa data melihat ajakan mulai belajar.
@@ -78,7 +78,7 @@ class StudentProgressScreen extends ConsumerWidget {
               children: [
                 _SummaryRow(dashboard: dashboard),
                 const SizedBox(height: 16),
-                _ThetaCard(dashboard: dashboard),
+                _ScoreCard(dashboard: dashboard),
                 const SizedBox(height: 16),
                 _MasteryCard(dashboard: dashboard),
                 const SizedBox(height: 16),
@@ -193,27 +193,27 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-/// Grafik garis perkembangan theta (fl_chart, responsif penuh).
-class _ThetaCard extends StatelessWidget {
+/// Grafik garis perkembangan skor persen (fl_chart, responsif penuh).
+class _ScoreCard extends StatelessWidget {
   final ProgressDashboard dashboard;
 
-  const _ThetaCard({required this.dashboard});
+  const _ScoreCard({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final points = dashboard.thetaPoints;
+    final points = dashboard.scorePoints;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Perkembangan Theta',
+            'Perkembangan Skor',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 4),
           Text(
-            dashboard.thetaSource == 'respons'
+            dashboard.scoreSource == 'respons'
                 ? 'Per jawaban (${points.length} terakhir)'
                 : 'Per sesi (${points.length} terakhir)',
             style: Theme.of(context).textTheme.bodySmall,
@@ -224,7 +224,7 @@ class _ThetaCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  'Belum ada data theta.',
+                  'Belum ada data skor.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -245,34 +245,21 @@ class _ThetaCard extends StatelessWidget {
   LineChartData _chartData(
     BuildContext context,
     ColorScheme colors,
-    List<ThetaPoint> points,
+    List<ScorePoint> points,
   ) {
     final spots = [
       for (var i = 0; i < points.length; i++)
-        FlSpot(i.toDouble(), points[i].theta),
+        FlSpot(i.toDouble(), points[i].percent),
     ];
-    var minY = spots.first.y;
-    var maxY = spots.first.y;
-    for (final spot in spots) {
-      if (spot.y < minY) minY = spot.y;
-      if (spot.y > maxY) maxY = spot.y;
-    }
-    if ((maxY - minY).abs() < 0.2) {
-      minY -= 0.5;
-      maxY += 0.5;
-    } else {
-      final pad = (maxY - minY) * 0.15;
-      minY -= pad;
-      maxY += pad;
-    }
     final maxX = (spots.length - 1).toDouble();
-    final interval = (maxX / 2).ceilToDouble().clamp(1.0, maxX);
+    final xAxisMax = maxX <= 0 ? 1.0 : maxX;
+    final interval = (xAxisMax / 2).ceilToDouble().clamp(1.0, xAxisMax);
 
     return LineChartData(
       minX: 0,
-      maxX: maxX <= 0 ? 1 : maxX,
-      minY: minY,
-      maxY: maxY,
+      maxX: xAxisMax,
+      minY: 0,
+      maxY: 100,
       gridData: const FlGridData(
         show: true,
         drawVerticalLine: false,
@@ -285,10 +272,10 @@ class _ThetaCard extends StatelessWidget {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 40,
-            interval: ((maxY - minY) / 4).clamp(0.1, double.infinity),
+            reservedSize: 44,
+            interval: 25,
             getTitlesWidget: (value, _) => Text(
-              value.toStringAsFixed(1),
+              '${value.round()}%',
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
@@ -323,7 +310,7 @@ class _ThetaCard extends StatelessWidget {
           getTooltipItems: (touchedSpots) => [
             for (final spot in touchedSpots)
               LineTooltipItem(
-                'θ = ${spot.y.toStringAsFixed(2)}',
+                '${spot.y.round()}%',
                 TextStyle(
                   color: colors.onInverseSurface,
                   fontWeight: FontWeight.w700,
@@ -352,7 +339,7 @@ class _ThetaCard extends StatelessWidget {
   }
 }
 
-/// Bar horizontal theta per konsep dengan label terbaca.
+/// Bar horizontal persentase per konsep dengan label terbaca.
 class _MasteryCard extends StatelessWidget {
   final ProgressDashboard dashboard;
 
@@ -418,8 +405,7 @@ class _MasteryCard extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: FractionallySizedBox(
                       alignment: Alignment.centerLeft,
-                      widthFactor:
-                          ((bar.thetaC + 4) / 8).clamp(0.03, 1.0),
+                      widthFactor: (bar.percent / 100).clamp(0.0, 1.0),
                       child: Container(color: _barColor(bar.status)),
                     ),
                   ),
@@ -428,7 +414,7 @@ class _MasteryCard extends StatelessWidget {
                 SizedBox(
                   width: 42,
                   child: Text(
-                    bar.thetaC.toStringAsFixed(1),
+                    '${bar.percent.round()}%',
                     style: textTheme.labelMedium,
                     textAlign: TextAlign.right,
                   ),
@@ -495,13 +481,13 @@ class _HistoryCard extends StatelessWidget {
                   '${_dateText(item.date)}'
                   '${item.scoreText == null ? '' : ' • ${item.scoreText}'}',
                 ),
-                trailing: item.theta == null
+                trailing: item.percent == null
                     ? Text(
                         item.resultLabel,
                         style: textTheme.labelMedium,
                       )
                     : Text(
-                        'θ ${item.theta!.toStringAsFixed(1)}',
+                        '${item.percent!.round()}%',
                         style: textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),

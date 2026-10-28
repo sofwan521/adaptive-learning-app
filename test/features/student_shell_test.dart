@@ -95,7 +95,6 @@ void main() {
       await _pumpFrames(tester);
 
       expect(find.text('Halo, Siswa Uji!'), findsOneWidget);
-      expect(find.text('120 XP'), findsOneWidget);
       expect(find.text('4 hari'), findsOneWidget);
       expect(find.text('Operasi Aljabar'), findsOneWidget);
       expect(find.text('3 dari 5 soal hari ini'), findsOneWidget);
@@ -113,7 +112,7 @@ void main() {
       await tester.tap(find.text('Progres'));
       await _pumpFrames(tester);
       expect(find.text('Ringkasan'), findsOneWidget);
-      expect(find.text('Perkembangan Theta'), findsOneWidget);
+      expect(find.text('Perkembangan Skor'), findsOneWidget);
 
       await tester.tap(find.text('Profil'));
       await _pumpFrames(tester);

@@ -56,9 +56,10 @@ class ClassInfo extends Equatable {
 class ClassMemberReport extends Equatable {
   final String studentId;
   final String fullName;
-  final double theta;
+
+  /// Skor kemampuan siswa dalam persen (0..100).
+  final double percent;
   final int masteredCount;
-  final int xp;
 
   /// Aktivitas terakhir (tanggal gamifikasi), null bila tak diketahui.
   final DateTime? lastActive;
@@ -66,15 +67,14 @@ class ClassMemberReport extends Equatable {
   const ClassMemberReport({
     required this.studentId,
     required this.fullName,
-    required this.theta,
+    required this.percent,
     required this.masteredCount,
-    required this.xp,
     this.lastActive,
   });
 
   @override
   List<Object?> get props =>
-      [studentId, fullName, theta, masteredCount, xp, lastActive];
+      [studentId, fullName, percent, masteredCount, lastActive];
 }
 
 /// Laporan kelas: daftar murid beserta kemajuannya.

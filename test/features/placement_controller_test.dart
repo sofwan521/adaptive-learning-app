@@ -283,7 +283,8 @@ void main() {
 
       expect(state.phase, PlacementPhase.done);
       expect(state.theta, lessThan(0.0));
-      expect(placementLevelName(state.theta), 'Pemula');
+      expect(state.scorePercent, lessThan(50));
+      expect(placementLevelName(state.scorePercent), 'Pemula');
       expect(state.masteredIds, isEmpty);
       expect(progress.states.keys.toSet(), {'K01', 'K02', 'K03'});
     });
@@ -385,12 +386,13 @@ void main() {
 
   group('placementLevelName', () {
     test('batas Pemula, Menengah, Mahir', () {
-      expect(placementLevelName(-2.0), 'Pemula');
-      expect(placementLevelName(-0.6), 'Pemula');
-      expect(placementLevelName(-0.5), 'Menengah');
-      expect(placementLevelName(0.4), 'Menengah');
-      expect(placementLevelName(1.0), 'Menengah');
-      expect(placementLevelName(1.1), 'Mahir');
+      expect(placementLevelName(0), 'Pemula');
+      expect(placementLevelName(37.9), 'Pemula');
+      expect(placementLevelName(38), 'Menengah');
+      expect(placementLevelName(60), 'Menengah');
+      expect(placementLevelName(73), 'Menengah');
+      expect(placementLevelName(73.1), 'Mahir');
+      expect(placementLevelName(100), 'Mahir');
     });
   });
 }

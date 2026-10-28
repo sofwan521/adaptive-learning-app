@@ -244,7 +244,7 @@ class _MemberTile extends StatelessWidget {
                 Text(name, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
-                  'θ ${member.theta.toStringAsFixed(1)} • '
+                  'Skor ${member.percent.round()}% • '
                   '${member.masteredCount}/$totalConcepts dikuasai • '
                   '${_lastActiveText()}',
                   style: Theme.of(context).textTheme.bodySmall,

@@ -9,6 +9,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/application/placement_provider.dart';
 import '../../../domain/graph/knowledge_graph.dart';
 import '../../../domain/irt/irt_engine.dart';
+import '../../../domain/irt/score_scale.dart';
 import '../../../domain/models/ability_estimate.dart';
 import '../../../domain/models/concept_status.dart';
 import '../../../domain/models/item.dart';
@@ -82,6 +83,9 @@ class PlacementState extends Equatable {
   /// Jumlah soal dalam sesi ini.
   int get total => items.length;
 
+  /// Skor kemampuan dalam persen (0..100).
+  double get scorePercent => thetaToPercent(theta);
+
   /// Nomor soal berjalan (1-based) untuk tampilan.
   ///
   /// Berbasis jumlah soal yang sudah dijawab agar berurutan 1..N
@@ -151,10 +155,10 @@ class PlacementState extends Equatable {
       ];
 }
 
-/// Nama tingkat kemampuan dalam bahasa awam.
-String placementLevelName(double theta) {
-  if (theta < -0.5) return 'Pemula';
-  if (theta <= 1.0) return 'Menengah';
+/// Nama tingkat kemampuan dalam bahasa awam berdasarkan persen.
+String placementLevelName(double percent) {
+  if (percent < 38) return 'Pemula';
+  if (percent <= 73) return 'Menengah';
   return 'Mahir';
 }
 
@@ -187,8 +191,7 @@ Map<String, StudentConceptState> buildInitialStates({
   for (final id in graph.topologicalOrder()) {
     final b = averageB[id];
     if (b == null) continue;
-    final prereqsOk =
-        graph.prerequisitesOf(id).every(mastered.contains);
+    final prereqsOk = graph.prerequisitesOf(id).every(mastered.contains);
     if (prereqsOk && b <= theta - 0.5) mastered.add(id);
   }
 
@@ -197,8 +200,9 @@ Map<String, StudentConceptState> buildInitialStates({
       id: StudentConceptState(
         studentId: studentId,
         conceptId: id,
-        status:
-            mastered.contains(id) ? ConceptStatus.mastered : ConceptStatus.locked,
+        status: mastered.contains(id)
+            ? ConceptStatus.mastered
+            : ConceptStatus.locked,
       ),
   };
   final statuses = graph.computeStatuses(seed);
@@ -381,7 +385,6 @@ class PlacementController extends Notifier<PlacementState> {
         finalTheta: estimate.theta,
       );
 
-      ref.invalidate(placementCompletedProvider);
       state = state.copyWith(
         phase: PlacementPhase.done,
         theta: estimate.theta,
@@ -391,6 +394,7 @@ class PlacementController extends Notifier<PlacementState> {
             if (entry.value.status == ConceptStatus.mastered) entry.key,
         ],
       );
+      ref.invalidate(placementCompletedProvider);
     } on AppException catch (e) {
       state = state.copyWith(
         phase: PlacementPhase.error,

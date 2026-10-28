@@ -11,15 +11,13 @@ import '../../../domain/models/student_concept_state.dart';
 /// Data gabungan detail murid untuk satu FutureBuilder.
 class _StudentDetailData {
   final String fullName;
-  final double theta;
-  final int xp;
+  final double percent;
   final DateTime? lastActive;
   final List<({String name, StudentConceptState state})> concepts;
 
   const _StudentDetailData({
     required this.fullName,
-    required this.theta,
-    required this.xp,
+    required this.percent,
     this.lastActive,
     required this.concepts,
   });
@@ -64,8 +62,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     final byId = {for (final s in states) s.conceptId: s};
     return _StudentDetailData(
       fullName: member.fullName.isEmpty ? 'Siswa' : member.fullName,
-      theta: member.theta,
-      xp: member.xp,
+      percent: member.percent,
       lastActive: member.lastActive,
       concepts: [
         for (final id in catalog.map((c) => c.id))
@@ -122,8 +119,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         Text(data.fullName, style: textTheme.titleLarge),
                         const SizedBox(height: 4),
                         Text(
-                          'θ ${data.theta.toStringAsFixed(1)} • '
-                          '${data.xp} XP • '
+                          'Skor ${data.percent.round()}% • '
                           '${last == null ? 'Belum pernah aktif' : 'Aktif ${last.day}/${last.month}/${last.year}'}',
                           style: textTheme.bodyMedium,
                         ),

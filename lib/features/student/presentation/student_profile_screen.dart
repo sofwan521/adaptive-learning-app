@@ -5,7 +5,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/repositories/teacher_repository_impl.dart';
-import '../../../domain/gamification/gamification_rules.dart';
+import '../../../domain/gamification/badges.dart';
 import '../../../domain/models/class_info.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../gamification/application/reminder_controller.dart';
@@ -72,7 +72,7 @@ class StudentProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Kartu XP, level (dengan progres ke level berikut), dan streak.
+/// Kartu streak belajar harian.
 class _GamificationCard extends ConsumerWidget {
   final VoidCallback onRetry;
 
@@ -82,55 +82,24 @@ class _GamificationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gamification = ref.watch(gamificationProvider);
     return gamification.when(
-      data: (state) {
-        final progress = xpProgressToNextLevel(state.xp);
-        final nextLevel = xpToLevel(state.xp) + 1;
-        final remaining =
-            xpThresholdForLevel(nextLevel) - state.xp;
-        return AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  XpBadge(xp: state.xp),
-                  LevelBadge(level: state.level),
-                ],
+      data: (state) => AppCard(
+        child: Row(
+          children: [
+            Icon(
+              Icons.local_fire_department,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Streak ${state.streak} hari',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 10,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$remaining XP lagi ke Level $nextLevel',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.local_fire_department,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Streak ${state.streak} hari',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
       loading: () => const AppCard(
         child: LoadingView(message: 'Memuat progres…'),
       ),
@@ -156,62 +125,26 @@ class _BadgesGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final badgesAsync = ref.watch(studentBadgesProvider);
     return badgesAsync.when(
-      data: (badges) => GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          mainAxisExtent: 152,
-        ),
-        itemCount: badges.length,
-        itemBuilder: (context, index) {
-          final entry = badges[index];
-          final earned = entry.earned;
-          final colors = Theme.of(context).colorScheme;
-          return AppCard(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: earned
-                        ? colors.primaryContainer
-                        : colors.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    earned
-                        ? badgeIconFor(entry.badge.code)
-                        : Icons.lock_outline,
-                    color: earned
-                        ? colors.onPrimaryContainer
-                        : colors.outline,
-                  ),
+      data: (badges) => LayoutBuilder(
+        builder: (context, constraints) {
+          const spacing = 8.0;
+          final textScaler = MediaQuery.textScalerOf(context);
+          final columns =
+              constraints.maxWidth < 320 || textScaler.scale(14) > 21 ? 1 : 2;
+          final itemWidth =
+              (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            children: [
+              for (final entry in badges)
+                SizedBox(
+                  width: itemWidth,
+                  child: _BadgeCard(entry: entry),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  entry.badge.name,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  earned ? entry.badge.description : 'Belum diperoleh',
-                  style: Theme.of(context).textTheme.labelSmall,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+            ],
           );
         },
       ),
@@ -225,6 +158,54 @@ class _BadgesGrid extends ConsumerWidget {
               : 'Gagal memuat lencana.',
           onRetry: onRetry,
         ),
+      ),
+    );
+  }
+}
+
+class _BadgeCard extends StatelessWidget {
+  final ({AppBadge badge, bool earned}) entry;
+
+  const _BadgeCard({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final earned = entry.earned;
+    final colors = Theme.of(context).colorScheme;
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: earned
+                  ? colors.primaryContainer
+                  : colors.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              earned ? badgeIconFor(entry.badge.code) : Icons.lock_outline,
+              color: earned ? colors.onPrimaryContainer : colors.outline,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            entry.badge.name,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            earned ? entry.badge.description : 'Belum diperoleh',
+            style: Theme.of(context).textTheme.labelSmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

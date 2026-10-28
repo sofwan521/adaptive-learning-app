@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../irt/score_scale.dart';
+
 /// Hasil estimasi kemampuan: rata-rata posterior (theta)
 /// dan simpangan baku posterior (SE).
 ///
@@ -13,6 +15,9 @@ class AbilityEstimate extends Equatable {
     required this.theta,
     required this.se,
   });
+
+  /// Skor kemampuan dalam persen (0..100).
+  double get percent => thetaToPercent(theta);
 
   factory AbilityEstimate.fromJson(Map<String, dynamic> json) {
     return AbilityEstimate(

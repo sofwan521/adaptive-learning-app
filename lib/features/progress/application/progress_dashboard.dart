@@ -4,23 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/concept_repository_impl.dart';
 import '../../../data/repositories/progress_repository_impl.dart';
 import '../../../domain/graph/knowledge_graph.dart';
+import '../../../domain/irt/score_scale.dart';
 import '../../../domain/models/concept_status.dart';
 import '../../../domain/models/quiz_session.dart';
 import '../../../domain/models/response_history.dart';
 import '../../../domain/models/student_concept_state.dart';
 
-/// Jumlah titik theta terbanyak pada grafik.
-const int thetaChartMaxPoints = 30;
+/// Jumlah titik skor terbanyak pada grafik.
+const int scoreChartMaxPoints = 30;
 
-/// Satu titik perkembangan theta.
-class ThetaPoint extends Equatable {
+/// Satu titik perkembangan skor (persen).
+class ScorePoint extends Equatable {
   final DateTime time;
-  final double theta;
+  final double percent;
 
-  const ThetaPoint(this.time, this.theta);
+  const ScorePoint(this.time, this.percent);
 
   @override
-  List<Object?> get props => [time, theta];
+  List<Object?> get props => [time, percent];
 }
 
 /// Bar penguasaan satu konsep.
@@ -28,19 +29,19 @@ class ConceptBarData extends Equatable {
   final String conceptId;
   final String code;
   final String name;
-  final double thetaC;
+  final double percent;
   final ConceptStatus status;
 
   const ConceptBarData({
     required this.conceptId,
     required this.code,
     required this.name,
-    required this.thetaC,
+    required this.percent,
     required this.status,
   });
 
   @override
-  List<Object?> get props => [conceptId, code, name, thetaC, status];
+  List<Object?> get props => [conceptId, code, name, percent, status];
 }
 
 /// Satu baris riwayat kuis.
@@ -50,7 +51,9 @@ class HistoryItemData extends Equatable {
   final DateTime? date;
   final String resultLabel;
   final String? scoreText;
-  final double? theta;
+
+  /// Skor sesi dalam persen (0..100), null bila belum ada.
+  final double? percent;
 
   const HistoryItemData({
     required this.sessionId,
@@ -58,12 +61,12 @@ class HistoryItemData extends Equatable {
     this.date,
     required this.resultLabel,
     this.scoreText,
-    this.theta,
+    this.percent,
   });
 
   @override
   List<Object?> get props =>
-      [sessionId, title, date, resultLabel, scoreText, theta];
+      [sessionId, title, date, resultLabel, scoreText, percent];
 }
 
 /// Agregat dasbor progres siswa.
@@ -71,11 +74,11 @@ class HistoryItemData extends Equatable {
 /// Logika murni — tanpa import Flutter — dibangun oleh
 /// [buildProgressDashboard] agar mudah diuji.
 class ProgressDashboard extends Equatable {
-  /// Titik theta menaik waktu (maks [thetaChartMaxPoints]).
-  final List<ThetaPoint> thetaPoints;
+  /// Titik skor menaik waktu (maks [scoreChartMaxPoints]).
+  final List<ScorePoint> scorePoints;
 
   /// Sumber titik: 'respons' (per jawaban) atau 'sesi'.
-  final String thetaSource;
+  final String scoreSource;
 
   final int masteredCount;
   final int totalConcepts;
@@ -88,8 +91,8 @@ class ProgressDashboard extends Equatable {
   final List<HistoryItemData> history;
 
   const ProgressDashboard({
-    this.thetaPoints = const [],
-    this.thetaSource = 'respons',
+    this.scorePoints = const [],
+    this.scoreSource = 'respons',
     this.masteredCount = 0,
     this.totalConcepts = 0,
     this.accuracy7d,
@@ -104,8 +107,8 @@ class ProgressDashboard extends Equatable {
 
   @override
   List<Object?> get props => [
-        thetaPoints,
-        thetaSource,
+        scorePoints,
+        scoreSource,
         masteredCount,
         totalConcepts,
         accuracy7d,
@@ -117,8 +120,8 @@ class ProgressDashboard extends Equatable {
 
 /// Susun dasbor dari data mentah repository.
 ///
-/// - Titik theta: `theta_after` per respons (30 terakhir); bila kosong,
-///   memakai `final_theta` per sesi.
+/// - Titik skor: `theta_after` per respons (30 terakhir) yang diubah
+///   menjadi persen; bila kosong, memakai `final_theta` per sesi.
 /// - Akurasi: jawaban 7 hari terakhir.
 /// - Riwayat: sesi terbaru digabung skor benar/total per sesi.
 ProgressDashboard buildProgressDashboard({
@@ -133,31 +136,34 @@ ProgressDashboard buildProgressDashboard({
   final byTime = [...responses]
     ..sort((a, b) => a.answeredAt.compareTo(b.answeredAt));
 
-  var thetaPoints = <ThetaPoint>[];
-  var thetaSource = 'respons';
-  final withTheta = [
+  var scorePoints = <ScorePoint>[];
+  var scoreSource = 'respons';
+  final withScore = [
     for (final r in byTime)
-      if (r.thetaAfter != null) ThetaPoint(r.answeredAt, r.thetaAfter!),
+      if (r.thetaAfter != null)
+        ScorePoint(r.answeredAt, thetaToPercent(r.thetaAfter!)),
   ];
-  if (withTheta.length > thetaChartMaxPoints) {
-    thetaPoints =
-        withTheta.sublist(withTheta.length - thetaChartMaxPoints);
+  if (withScore.length > scoreChartMaxPoints) {
+    scorePoints =
+        withScore.sublist(withScore.length - scoreChartMaxPoints);
   } else {
-    thetaPoints = withTheta;
+    scorePoints = withScore;
   }
-  if (thetaPoints.isEmpty) {
-    thetaSource = 'sesi';
-    final sessionPoints = <ThetaPoint>[];
+  if (scorePoints.isEmpty) {
+    scoreSource = 'sesi';
+    final sessionPoints = <ScorePoint>[];
     final byStart = [...sessions]
       ..sort((a, b) => _sessionTime(a).compareTo(_sessionTime(b)));
     for (final session in byStart) {
       final theta = session.finalTheta;
       if (theta != null) {
-        sessionPoints.add(ThetaPoint(_sessionTime(session), theta));
+        sessionPoints.add(
+          ScorePoint(_sessionTime(session), thetaToPercent(theta)),
+        );
       }
     }
-    thetaPoints = sessionPoints.length > thetaChartMaxPoints
-        ? sessionPoints.sublist(sessionPoints.length - thetaChartMaxPoints)
+    scorePoints = sessionPoints.length > scoreChartMaxPoints
+        ? sessionPoints.sublist(sessionPoints.length - scoreChartMaxPoints)
         : sessionPoints;
   }
 
@@ -181,13 +187,18 @@ ProgressDashboard buildProgressDashboard({
   for (final id in orderedIds) {
     final concept = concepts[id];
     if (concept == null) continue;
+    final status = statuses[id] ?? ConceptStatus.locked;
+    final state = statesById[id];
+    final percent = state == null || status == ConceptStatus.locked
+        ? 0.0
+        : thetaToPercent(state.thetaC);
     bars.add(
       ConceptBarData(
         conceptId: id,
         code: concept.code,
         name: concept.name,
-        thetaC: statesById[id]?.thetaC ?? 0.0,
-        status: statuses[id] ?? ConceptStatus.locked,
+        percent: percent,
+        status: status,
       ),
     );
   }
@@ -221,14 +232,16 @@ ProgressDashboard buildProgressDashboard({
         scoreText: score == null
             ? null
             : '${score.correct}/${score.total} benar',
-        theta: session.finalTheta,
+        percent: session.finalTheta == null
+            ? null
+            : thetaToPercent(session.finalTheta!),
       ),
     );
   }
 
   return ProgressDashboard(
-    thetaPoints: thetaPoints,
-    thetaSource: thetaSource,
+    scorePoints: scorePoints,
+    scoreSource: scoreSource,
     masteredCount: masteredCount,
     totalConcepts: concepts.length,
     accuracy7d: accuracy7d,
@@ -254,7 +267,7 @@ final progressDashboardProvider = FutureProvider<ProgressDashboard>(
     final edges = await conceptsRepo.fetchEdges();
     final graph = KnowledgeGraph(concepts: concepts, edges: edges);
     final states = await progress.loadConceptStates();
-    final sessions = await progress.history(limit: thetaChartMaxPoints);
+    final sessions = await progress.history(limit: scoreChartMaxPoints);
     final responses = await progress.loadResponseHistory(limit: 300);
 
     final statesById = {for (final s in states) s.conceptId: s};

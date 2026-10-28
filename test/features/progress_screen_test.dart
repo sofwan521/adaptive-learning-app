@@ -96,8 +96,8 @@ void main() {
       expect(find.text('Ringkasan'), findsOneWidget);
       expect(find.text('1/3'), findsOneWidget);
       expect(find.text('Total soal'), findsOneWidget);
-      // Grafik theta.
-      expect(find.text('Perkembangan Theta'), findsOneWidget);
+      // Grafik skor.
+      expect(find.text('Perkembangan Skor'), findsOneWidget);
       expect(find.byType(LineChart), findsOneWidget);
       // Bar per konsep.
       expect(find.text('Penguasaan per Konsep'), findsOneWidget);
@@ -110,6 +110,27 @@ void main() {
       expect(find.text('Riwayat Kuis'), findsOneWidget);
       expect(find.textContaining('1/2 benar'), findsOneWidget);
       expect(find.textContaining('1/1 benar'), findsOneWidget);
+    });
+
+    testWidgets('satu titik skor tetap menampilkan grafik', (tester) async {
+      final now = DateTime.now();
+      await _pumpScreen(
+        tester,
+        progress: FakeProgressRepository(
+          states: [learningState('K01')],
+          responses: [
+            ResponseHistoryEntry(
+              sessionId: 's1',
+              isCorrect: true,
+              thetaAfter: 0.2,
+              answeredAt: now,
+            ),
+          ],
+        ),
+      );
+
+      expect(find.byType(LineChart), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('tarik untuk menyegarkan tidak merusak tampilan',

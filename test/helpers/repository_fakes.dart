@@ -210,22 +210,21 @@ class FakeProgressRepository implements ProgressRepository {
 
 class FakeGamificationRepository implements GamificationRepository {
   GamificationState state;
+  AppException? failure;
   final Set<String> badgeCodes = {};
 
   FakeGamificationRepository({GamificationState? state})
       : state = state ??
             const GamificationState(
               studentId: 'siswa-1',
-              xp: 120,
-              level: 2,
               streak: 4,
             );
 
   @override
-  Future<GamificationState> load() async => state;
-
-  @override
-  Future<GamificationState> addXp(int xp) async => state;
+  Future<GamificationState> load() async {
+    if (failure != null) throw failure!;
+    return state;
+  }
 
   @override
   Future<GamificationState> updateStreak() async => state;

@@ -85,15 +85,12 @@ Future<void> _pumpProfile(
 
 void main() {
   group('StudentProfileScreen', () {
-    testWidgets('menampilkan XP, level, streak, dan lencana',
-        (tester) async {
+    testWidgets('menampilkan streak dan lencana', (tester) async {
       final gamification = FakeGamificationRepository()
         ..badgeCodes.add('langkah-pertama');
       await _pumpProfile(tester, gamification: gamification);
 
       expect(find.text('Siswa Uji'), findsOneWidget);
-      expect(find.text('120 XP'), findsOneWidget);
-      expect(find.text('Level 2'), findsOneWidget);
       expect(find.textContaining('Streak 4 hari'), findsOneWidget);
       // Katalog 4 lencana tampil; yang diperoleh tak terkunci.
       expect(find.text('Langkah Pertama'), findsOneWidget);

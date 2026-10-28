@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../domain/gamification/badges.dart';
-import '../../../domain/gamification/gamification_rules.dart';
 import '../../../domain/irt/irt_engine.dart';
+import '../../../domain/irt/score_scale.dart';
 import '../application/quiz_controller.dart';
 
 /// Hasil kuis satu konsep.
 ///
-/// - Dikuasai: perayaan, XP yang diperoleh, dan konsep baru yang terbuka.
+/// - Dikuasai: perayaan, skor kemampuan, dan konsep baru yang terbuka.
 /// - Gagal: kartu `Akar masalah: <konsep>` dan jalur remedial berurutan
 ///   dengan tombol `Ulangi <konsep>` (membuka materi), serta tombol
 ///   `Kembali ke Peta`. Bila kuis ini remedial dan lulus, tawarkan
@@ -59,19 +59,12 @@ class _MasteredBody extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Center(child: XpBadge(xp: state.xpEarned)),
-          if (state.leveledUp) ...[
-            const SizedBox(height: 8),
-            Center(
-              child: LevelBadge(level: xpToLevel(state.xpTotal)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Naik level! Pertahankan streak belajarmu.',
-              style: textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
+          Text(
+            'Skor kemampuan: '
+            '${formatPercent(state.conceptScorePercent)}',
+            style: textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
           if (state.newBadges.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(

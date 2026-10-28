@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../domain/irt/score_scale.dart';
 import '../application/placement_controller.dart';
 
 /// Hasil placement test: tingkat kemampuan bahasa awam,
@@ -40,7 +41,7 @@ class PlacementResultScreen extends ConsumerWidget {
       );
     }
 
-    final level = placementLevelName(state.theta);
+    final level = placementLevelName(state.scorePercent);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Hasil Tes')),
@@ -56,7 +57,7 @@ class PlacementResultScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Skor kemampuan (theta): ${state.theta.toStringAsFixed(2)}',
+              'Skor kemampuan: ${formatPercent(state.scorePercent)}',
               style: textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
