@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -70,14 +71,24 @@ const _publicRoutes = {
 /// - Belum masuk (atau sesi diperiksa) -> /splash lalu /login.
 /// - Siswa belum placement test -> /placement.
 /// - Siswa -> /student/home; guru/admin -> /teacher/classes.
+class _RouterRefresh extends ChangeNotifier {
+  _RouterRefresh(Ref ref) {
+    ref.listen(authControllerProvider, (_, __) => notifyListeners());
+    ref.listen(placementCompletedProvider, (_, __) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  final placement = ref.watch(placementCompletedProvider);
+  final refresh = _RouterRefresh(ref);
+  ref.onDispose(refresh.dispose);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: refresh,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final auth = ref.read(authControllerProvider);
+      final placement = ref.read(placementCompletedProvider);
       final authenticated =
           auth.status == AuthStatus.authenticated && auth.profile != null;
 
@@ -94,20 +105,21 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final role = auth.profile!.role;
       if (role == UserRole.teacher || role == UserRole.admin) {
-        if (location.startsWith('/teacher') ||
-            location == AppRoutes.gallery) {
+        if (location.startsWith('/teacher') || location == AppRoutes.gallery) {
           return null;
         }
         return AppRoutes.teacherClasses;
       }
+
+      // Halaman hasil boleh dibuka agar bisa dilihat tepat setelah tes,
+      // termasuk saat status placement sedang dimuat ulang.
+      if (location == AppRoutes.placementResult) return null;
 
       // Peran siswa: placement dulu bila belum tuntas.
       if (placement.isLoading) {
         return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
       final done = placement.value ?? false;
-      // Halaman hasil boleh dibuka agar bisa dilihat tepat setelah tes.
-      if (location == AppRoutes.placementResult) return null;
       if (location == AppRoutes.placement) {
         return done ? AppRoutes.studentHome : null;
       }
@@ -187,8 +199,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.studentProgress,
                 name: 'student-progress',
-                builder: (context, state) =>
-                    const StudentProgressScreen(),
+                builder: (context, state) => const StudentProgressScreen(),
               ),
             ],
           ),
@@ -197,8 +208,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.studentProfile,
                 name: 'student-profile',
-                builder: (context, state) =>
-                    const StudentProfileScreen(),
+                builder: (context, state) => const StudentProfileScreen(),
               ),
             ],
           ),

@@ -210,6 +210,7 @@ class FakeProgressRepository implements ProgressRepository {
 
 class FakeGamificationRepository implements GamificationRepository {
   GamificationState state;
+  AppException? failure;
   final Set<String> badgeCodes = {};
 
   FakeGamificationRepository({GamificationState? state})
@@ -220,7 +221,10 @@ class FakeGamificationRepository implements GamificationRepository {
             );
 
   @override
-  Future<GamificationState> load() async => state;
+  Future<GamificationState> load() async {
+    if (failure != null) throw failure!;
+    return state;
+  }
 
   @override
   Future<GamificationState> updateStreak() async => state;

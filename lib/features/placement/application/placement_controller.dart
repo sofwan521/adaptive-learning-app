@@ -191,8 +191,7 @@ Map<String, StudentConceptState> buildInitialStates({
   for (final id in graph.topologicalOrder()) {
     final b = averageB[id];
     if (b == null) continue;
-    final prereqsOk =
-        graph.prerequisitesOf(id).every(mastered.contains);
+    final prereqsOk = graph.prerequisitesOf(id).every(mastered.contains);
     if (prereqsOk && b <= theta - 0.5) mastered.add(id);
   }
 
@@ -201,8 +200,9 @@ Map<String, StudentConceptState> buildInitialStates({
       id: StudentConceptState(
         studentId: studentId,
         conceptId: id,
-        status:
-            mastered.contains(id) ? ConceptStatus.mastered : ConceptStatus.locked,
+        status: mastered.contains(id)
+            ? ConceptStatus.mastered
+            : ConceptStatus.locked,
       ),
   };
   final statuses = graph.computeStatuses(seed);
@@ -385,7 +385,6 @@ class PlacementController extends Notifier<PlacementState> {
         finalTheta: estimate.theta,
       );
 
-      ref.invalidate(placementCompletedProvider);
       state = state.copyWith(
         phase: PlacementPhase.done,
         theta: estimate.theta,
@@ -395,6 +394,7 @@ class PlacementController extends Notifier<PlacementState> {
             if (entry.value.status == ConceptStatus.mastered) entry.key,
         ],
       );
+      ref.invalidate(placementCompletedProvider);
     } on AppException catch (e) {
       state = state.copyWith(
         phase: PlacementPhase.error,

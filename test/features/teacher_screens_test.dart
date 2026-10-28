@@ -248,6 +248,31 @@ void main() {
       expect(find.byKey(const Key('class-create-fab')), findsOneWidget);
     });
 
+    testWidgets('galat memuat kelas bisa dicoba lagi', (tester) async {
+      final teacher = FakeTeacherRepository(
+        classList: const [
+          ClassInfo(
+            id: 'kelas-1',
+            teacherId: 'guru-1',
+            name: 'Matematika 7A',
+            joinCode: 'AB12CD',
+            memberCount: 2,
+          ),
+        ],
+      )..failure = const AppException('Gagal memuat kelas.');
+      await _pump(tester, const TeacherClassesScreen(), teacher: teacher);
+
+      expect(find.text('Gagal memuat kelas.'), findsOneWidget);
+
+      teacher.failure = null;
+      await tester.tap(find.text('Coba lagi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Matematika 7A'), findsOneWidget);
+      expect(find.text('Gagal memuat kelas.'), findsNothing);
+    });
+
     testWidgets('buat kelas memunculkan hasil di daftar', (tester) async {
       final teacher = FakeTeacherRepository();
       await _pump(
@@ -277,8 +302,7 @@ void main() {
   });
 
   group('ClassDetailScreen', () {
-    testWidgets('menampilkan siswa, terakhir aktif, dan gagal',
-        (tester) async {
+    testWidgets('menampilkan siswa, terakhir aktif, dan gagal', (tester) async {
       await _pump(
         tester,
         const ClassDetailScreen(classId: 'kelas-1'),
