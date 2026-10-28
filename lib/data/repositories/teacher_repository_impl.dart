@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/error/app_exception.dart';
+import '../../domain/irt/score_scale.dart';
 import '../../domain/models/class_info.dart';
 import '../../domain/models/concept_status.dart';
 import '../../domain/models/quiz_session.dart';
@@ -125,7 +126,7 @@ class SupabaseTeacherRepository implements TeacherRepository {
           .inFilter('student_id', studentIds);
       final gamification = await _client
           .from('gamification')
-          .select('student_id,xp,last_active_date')
+          .select('student_id,last_active_date')
           .inFilter('student_id', studentIds);
 
       String byId(List rows, String idKey, String id, String field) {
@@ -135,13 +136,14 @@ class SupabaseTeacherRepository implements TeacherRepository {
         return '';
       }
 
-      double thetaOf(String id) {
+      double percentOf(String id) {
         for (final row in (abilities as List)) {
           if (row['student_id'] == id) {
-            return (row['theta'] as num? ?? 0).toDouble();
+            final theta = (row['theta'] as num? ?? 0).toDouble();
+            return thetaToPercent(theta);
           }
         }
-        return 0;
+        return thetaToPercent(0);
       }
 
       int masteredOf(String id) {
@@ -150,13 +152,6 @@ class SupabaseTeacherRepository implements TeacherRepository {
           if (row['student_id'] == id && row['status'] == 'mastered') count++;
         }
         return count;
-      }
-
-      int xpOf(String id) {
-        for (final row in (gamification as List)) {
-          if (row['student_id'] == id) return row['xp'] as int? ?? 0;
-        }
-        return 0;
       }
 
       DateTime? lastActiveOf(String id) {
@@ -182,9 +177,8 @@ class SupabaseTeacherRepository implements TeacherRepository {
             ClassMemberReport(
               studentId: id,
               fullName: byId(profiles as List, 'id', id, 'full_name'),
-              theta: thetaOf(id),
+              percent: percentOf(id),
               masteredCount: masteredOf(id),
-              xp: xpOf(id),
               lastActive: lastActiveOf(id),
             ),
         ],

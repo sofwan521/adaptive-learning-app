@@ -216,16 +216,11 @@ class FakeGamificationRepository implements GamificationRepository {
       : state = state ??
             const GamificationState(
               studentId: 'siswa-1',
-              xp: 120,
-              level: 2,
               streak: 4,
             );
 
   @override
   Future<GamificationState> load() async => state;
-
-  @override
-  Future<GamificationState> addXp(int xp) async => state;
 
   @override
   Future<GamificationState> updateStreak() async => state;

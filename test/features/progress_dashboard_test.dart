@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:adaptive_learning_app/domain/irt/score_scale.dart';
 import 'package:adaptive_learning_app/domain/models/concept_status.dart';
 import 'package:adaptive_learning_app/domain/models/quiz_session.dart';
 import 'package:adaptive_learning_app/domain/models/response_history.dart';
@@ -69,7 +70,7 @@ void main() {
       );
 
       expect(dashboard.isEmpty, isTrue);
-      expect(dashboard.thetaPoints, isEmpty);
+      expect(dashboard.scorePoints, isEmpty);
       expect(dashboard.accuracy7d, isNull);
       expect(dashboard.totalAnswered, 0);
       expect(dashboard.bars, hasLength(3));
@@ -145,20 +146,23 @@ void main() {
       );
     }
 
-    test('titik theta per respons menaik waktu', () {
+    test('titik skor per respons menaik waktu', () {
       final dashboard = build();
 
       expect(dashboard.isEmpty, isFalse);
-      expect(dashboard.thetaSource, 'respons');
-      expect(dashboard.thetaPoints, hasLength(6));
-      for (var i = 1; i < dashboard.thetaPoints.length; i++) {
+      expect(dashboard.scoreSource, 'respons');
+      expect(dashboard.scorePoints, hasLength(6));
+      for (var i = 1; i < dashboard.scorePoints.length; i++) {
         expect(
-          dashboard.thetaPoints[i].time
-              .isAfter(dashboard.thetaPoints[i - 1].time),
+          dashboard.scorePoints[i].time
+              .isAfter(dashboard.scorePoints[i - 1].time),
           isTrue,
         );
       }
-      expect(dashboard.thetaPoints.last.theta, 0.6);
+      expect(
+        dashboard.scorePoints.last.percent,
+        closeTo(thetaToPercent(0.6), 1e-9),
+      );
     });
 
     test('titik dibatasi 30 terakhir', () {
@@ -181,12 +185,18 @@ void main() {
         now: now,
       );
 
-      expect(dashboard.thetaPoints, hasLength(30));
-      expect(dashboard.thetaPoints.first.theta, closeTo(-1.0, 1e-9));
-      expect(dashboard.thetaPoints.last.theta, closeTo(1.9, 1e-9));
+      expect(dashboard.scorePoints, hasLength(30));
+      expect(
+        dashboard.scorePoints.first.percent,
+        closeTo(thetaToPercent(-1.0), 1e-9),
+      );
+      expect(
+        dashboard.scorePoints.last.percent,
+        closeTo(thetaToPercent(1.9), 1e-9),
+      );
     });
 
-    test('fallback ke theta per sesi bila respons tanpa theta', () {
+    test('fallback ke skor per sesi bila respons tanpa theta', () {
       final dashboard = buildProgressDashboard(
         concepts: _concepts(),
         orderedIds: _order(),
@@ -216,10 +226,10 @@ void main() {
         now: now,
       );
 
-      expect(dashboard.thetaSource, 'sesi');
+      expect(dashboard.scoreSource, 'sesi');
       expect(
-        dashboard.thetaPoints.map((p) => p.theta),
-        [0.3, 0.8],
+        dashboard.scorePoints.map((p) => p.percent),
+        [thetaToPercent(0.3), thetaToPercent(0.8)],
       );
     });
 
@@ -233,7 +243,7 @@ void main() {
       expect(dashboard.totalAnswered, 6);
     });
 
-    test('bar per konsep terurut dengan theta dan status', () {
+    test('bar per konsep terurut dengan persen dan status', () {
       final dashboard = build();
 
       expect(
@@ -241,7 +251,11 @@ void main() {
         ['K01', 'K02', 'K03'],
       );
       expect(dashboard.bars.first.status, ConceptStatus.mastered);
-      expect(dashboard.bars.last.thetaC, 0.0);
+      expect(
+        dashboard.bars.first.percent,
+        closeTo(thetaToPercent(masteredState('K01').thetaC), 1e-9),
+      );
+      expect(dashboard.bars.last.percent, 0.0);
     });
 
     test('riwayat menggabung skor tiap sesi terbaru dulu', () {
@@ -251,6 +265,10 @@ void main() {
       expect(dashboard.history.first.title, 'Operasi Aljabar');
       expect(dashboard.history.first.scoreText, '3/3 benar');
       expect(dashboard.history.first.resultLabel, 'Selesai');
+      expect(
+        dashboard.history.first.percent,
+        closeTo(thetaToPercent(0.6), 1e-9),
+      );
       expect(dashboard.history.last.scoreText, '1/2 benar');
     });
 

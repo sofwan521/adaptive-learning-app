@@ -24,7 +24,6 @@ void main() {
     for (final status in ConceptStatus.values) {
       expect(find.text(status.label), findsWidgets);
     }
-    expect(find.text('50 XP'), findsOneWidget);
     expect(find.text('Memuat materi…'), findsOneWidget);
   });
 

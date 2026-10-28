@@ -10,7 +10,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../gamification/application/notification_scheduler.dart';
 import '../application/student_providers.dart';
 
-/// Beranda siswa: sapaan, XP/streak, kartu lanjutan, dan target harian.
+/// Beranda siswa: sapaan, streak, kartu lanjutan, dan target harian.
 ///
 /// Data dari providers dengan state loading, error (coba lagi), dan kosong.
 /// Dari sini ke kuis cukup 1 ketukan ("Mulai Kuis").
@@ -92,8 +92,6 @@ class _StatsRow extends ConsumerWidget {
         spacing: 8,
         runSpacing: 8,
         children: [
-          XpBadge(xp: state.xp),
-          LevelBadge(level: state.level),
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -134,7 +132,7 @@ class _StatsRow extends ConsumerWidget {
             child: Text(
               error is AppException
                   ? error.message
-                  : 'Gagal memuat XP.',
+                  : 'Gagal memuat data belajar.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

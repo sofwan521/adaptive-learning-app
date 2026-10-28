@@ -26,8 +26,6 @@ class SupabaseGamificationRepository implements GamificationRepository {
     await _client.from('gamification').upsert(
       {
         'student_id': state.studentId,
-        'xp': state.xp,
-        'level': state.level,
         'streak': state.streak,
         'last_active_date': state.lastActiveDate
             ?.toIso8601String()
@@ -54,25 +52,6 @@ class SupabaseGamificationRepository implements GamificationRepository {
   }
 
   @override
-  Future<GamificationState> addXp(int xp) async {
-    try {
-      final current = await load();
-      final total = current.xp + xp;
-      final updated = GamificationState(
-        studentId: current.studentId,
-        xp: total,
-        level: xpToLevel(total),
-        streak: current.streak,
-        lastActiveDate: current.lastActiveDate,
-      );
-      await _save(updated);
-      return updated;
-    } catch (e) {
-      throw mapToAppException(e);
-    }
-  }
-
-  @override
   Future<GamificationState> updateStreak() async {
     try {
       final current = await load();
@@ -90,8 +69,6 @@ class SupabaseGamificationRepository implements GamificationRepository {
       );
       final updated = GamificationState(
         studentId: current.studentId,
-        xp: current.xp,
-        level: current.level,
         streak: streak,
         lastActiveDate: today,
       );

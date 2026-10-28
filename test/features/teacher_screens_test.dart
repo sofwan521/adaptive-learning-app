@@ -130,17 +130,15 @@ ClassReport _report() => ClassReport(
         ClassMemberReport(
           studentId: 'siswa-1',
           fullName: 'Siswa Uji',
-          theta: 0.8,
+          percent: 69,
           masteredCount: 1,
-          xp: 140,
           lastActive: DateTime(2026, 10, 12),
         ),
         const ClassMemberReport(
           studentId: 'siswa-2',
           fullName: '',
-          theta: -0.5,
+          percent: 38,
           masteredCount: 0,
-          xp: 20,
         ),
       ],
     );

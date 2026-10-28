@@ -85,8 +85,6 @@ class GalleryScreen extends StatelessWidget {
                         'Persamaan Linear',
                         style: textTheme.titleMedium,
                       ),
-                      const Spacer(),
-                      const XpBadge(xp: 50),
                     ],
                   ),
                   const SizedBox(height: 8),
