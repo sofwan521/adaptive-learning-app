@@ -192,6 +192,28 @@ void main() {
       expect(mapped.message, contains('sudah terdaftar'));
     });
 
+    test('galat jaringan tidak dikira galat kata sandi', () {
+      final mapped = mapToAppException(
+        AuthRetryableFetchException(
+          message: 'ClientException: Failed host lookup, '
+              'uri=https://contoh.supabase.co/auth/v1/token'
+              '?grant_type=password',
+        ),
+      );
+      expect(mapped.message, contains('koneksi internet'));
+    });
+
+    test('kata sandi lemah tetap dipetakan dengan benar', () {
+      final mapped = mapToAppException(
+        AuthWeakPasswordException(
+          message: 'Password should be at least 6 characters',
+          statusCode: '422',
+          reasons: const ['length'],
+        ),
+      );
+      expect(mapped.message, contains('tidak memenuhi syarat'));
+    });
+
     test('isOfflineError membedakan galat jaringan', () {
       expect(isOfflineError(const SocketException('x')), isTrue);
       expect(

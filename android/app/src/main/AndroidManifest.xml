@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Wajib untuk mengakses Supabase. Hanya ada di manifest debug bawaan,
+         jadi build rilis tanpa izin ini tidak bisa login. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Izin notifikasi pengingat belajar (Android 13+ meminta saat dipakai). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
